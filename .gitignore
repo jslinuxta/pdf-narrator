@@ -1,0 +1,35 @@
+# Ignore everything in the extracted_pdf folder except the folder itself
+extracted_pdf/*
+!extracted_pdf/.gitkeep
+
+# Ignore everything in the audiobooks folder except the folder itself
+audiobooks/*
+!audiobooks/.gitkeep
+
+# Ignore virtual environment files
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.log
+
+# Ignore temporary files
+*.tmp
+*.swp
+*.bak
+*.~*
+.DS_Store
+Thumbs.db
+
+# Ignore config file
+config.json
+
+# Ignore all files in the models directory and its subdirectories
+models/**
+
+# Exclude (unignore) directories within models
+!models/**/
+
+# Optionally, include a .gitkeep file to retain empty directories
+!models/**/.gitkeep
+
