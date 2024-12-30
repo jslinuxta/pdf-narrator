@@ -4,12 +4,61 @@ import regex as re
 import os
 
 def clean_text(text):
-    text = re.sub(r'-\n\s*', '', text)  # Merge hyphenated line breaks
-    text = re.sub(r'\n{3,}', '\n\n', text)  # Limit blank lines
-    text = re.sub(r'[ \t]{2,}', ' ', text)  # Remove excessive spacing
-    text = text.replace('.', ' ')  # Replace dots with spaces
-    text = text.replace('\t', '').replace('\u0329', '')
-    return text.strip()
+    import regex as re
+
+    # Merge hyphenated line breaks
+    text = re.sub(r'-\n\s*', '', text)
+
+    # Normalize spaces around punctuation
+    text = re.sub(r'\s*([.,;!?])\s*', r'\1 ', text)
+
+    # Handle quoted content by placing it on its own line
+    text = re.sub(r'“([^”]*)”', r'\n“\1”\n', text)  # For curly quotes
+    text = re.sub(r'"([^"]*)"', r'\n"\1"\n', text)  # For straight quotes
+
+    # Split text into lines for processing
+    lines = text.splitlines()
+    processed_lines = []
+    buffer = ""
+
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue  # Skip empty lines
+
+        if buffer:
+            buffer += " " + line
+        else:
+            buffer = line
+
+        # Check if the buffer ends with punctuation and is not part of a quote
+        if re.search(r'[.!?]$', buffer) and not re.search(r'[“"”]$', buffer):
+            # If there is punctuation within the buffer, split it
+            split_buffer = re.split(r'(?<=[.!?])\s+(?![”"])', buffer)  # Avoid splitting inside quotes
+            processed_lines.extend(split_buffer)
+            buffer = ""
+
+    # Add any remaining text in the buffer
+    if buffer:
+        processed_lines.append(buffer)
+
+    # Collapse excessive blank lines
+    processed_lines = [line for line in processed_lines if line.strip()]
+    
+    # Collapse excessive spaces
+    processed_text = "\n".join(processed_lines)
+    processed_text = re.sub(r'[ \t]{2,}', ' ', processed_text)
+
+    # Add final newlines after punctuation for TTS readability
+    processed_text = re.sub(r'(?<=[.!?])\s*(?!\n)', '\n', processed_text)
+
+    # Remove excessive blank lines
+    processed_text = re.sub(r'\n{3,}', '\n\n', processed_text)
+
+    return processed_text.strip()
+
+
+
 
 def extract_cleaned_text(doc, header_threshold=50, footer_threshold=50):
     all_pages = []
@@ -45,6 +94,7 @@ def extract_cleaned_text(doc, header_threshold=50, footer_threshold=50):
         page_text = clean_text(page_text)
         all_pages.append(page_text)
     return all_pages
+
 
 def get_table_of_contents(doc):
     toc = doc.get_toc()

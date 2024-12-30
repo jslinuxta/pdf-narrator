@@ -1,56 +1,103 @@
-# PDF Narrator
+# PDF Narrator (Kokoro Edition)
 
-## Overview
-
-Transform PDF documents into audiobooks effortlessly using advanced text extraction and text-to-speech technology. This tool is optimized for efficiency, making it ideal for low-VRAM systems and immersive reading experiences.
+Transform your PDF documents into audiobooks effortlessly using **advanced text extraction** and **Kokoro TTS** technology. This fork/variation of Kokoro allows for **longer file generation** and better handling of extracted PDF text.
 
 ## Demo
 
-Below is a preview of the PDF to Audiobook conversion process:
+1. **Screenshot**  
+   Check out the GUI in the screenshot below:  
+   ![Demo Screenshot](assets/demo.png)
 
-![Demo Screenshot](assets/demo.png)
+2. **Audio Sample**  
+   Listen to a short sample of the generated audiobook:  
+   [Click to listen to `demo.wav`](assets/demo.wav)
 
 ## Features
 
-- 🔍 **Intelligent PDF Text Extraction**: Removes headers, footers, and page numbers.
-- 📖 **Chapter or Full-Book Conversion**: Extract based on Table of Contents (TOC) or the entire document.
-- 🎙️ **Customizable Text-to-Speech Settings**: Supports multiple TTS models and speaker configurations.
-- 💻 **Low-Resource Processing**: Adjusts chunk sizes dynamically for lower-VRAM systems.
-- 🎨 **User-Friendly GUI with Theme Customization**: Switch themes easily and save preferences.
+- **Intelligent PDF Text Extraction**
+
+  - Skips headers, footers, and page numbers.
+  - Optionally splits based on Table of Contents (TOC) or extracts the entire document.
+
+- **Kokoro TTS Integration**
+
+  - Generate natural-sounding audiobooks with the [Kokoro-82M model](https://huggingface.co/hexgrad/Kokoro-82M).
+  - Easily select or swap out different `.pt` voicepacks.
+
+- **User-Friendly GUI**
+
+  - Modern interface with **ttkbootstrap** (theme selector, scrolled logs, progress bars).
+  - Pause/resume and cancel your audiobook generation anytime.
+
+- **Configurable for Low-VRAM Systems**
+  - Choose the chunk size for text to accommodate limited GPU resources.
+  - Switch to CPU if no GPU is available.
+
+---
+
+## Demo
+
+1. **Screenshot**  
+   Check out the screenshot above (`assets/demo.png`) for a sneak peek at the GUI.
+
+2. **Audio Sample**  
+   Listen to a short sample of the output in [`assets/demo.wav`](assets/demo.wav). This file demonstrates the clarity and natural tone possible with Kokoro TTS.
 
 ---
 
 ## Prerequisites
 
-- **Python** 3.8+
-- **FFmpeg**: Required for audio processing.
-- **Piper TTS**: For high-quality text-to-speech conversion.
+- **Python 3.8+**
+- **FFmpeg** (for audio-related tasks on some systems).
+- **Torch** (PyTorch for the Kokoro TTS model).
+- **Other Dependencies** listed in `requirements.txt`.
 
 ---
 
 ## Installation
 
-1. **Clone the repository**
+1. **Clone the Repository**
 
    ```bash
    git clone https://github.com/mateogon/pdf-narrator.git
    cd pdf-narrator
    ```
 
-2. **Create a virtual environment**
+2. **Create and Activate a Virtual Environment**
 
    ```bash
    python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   # On Linux/macOS:
+   source venv/bin/activate
+   # On Windows:
+   venv\Scripts\activate
    ```
 
-3. **Install dependencies**
+3. **Install Python Dependencies**
 
    ```bash
+   pip install --upgrade pip
    pip install -r requirements.txt
    ```
 
-4. **Install FFmpeg**
+4. **Download Kokoro Model**
+
+   - Go to the [Kokoro-82M Hugging Face page](https://huggingface.co/hexgrad/Kokoro-82M).
+   - Download the model checkpoint:  
+     [kokoro-v0_19.pth?download=true](https://huggingface.co/hexgrad/Kokoro-82M/resolve/main/kokoro-v0_19.pth?download=true)
+   - Place this file in the `models/` directory (or a subdirectory) of your project.  
+     Example:
+     ```bash
+     mkdir -p models
+     mv /path/to/kokoro-v0_19.pth models/
+     ```
+
+5. **Optional: Download Additional Voicepacks**
+
+   - By default, `.pt` files (voicepacks) are in `Kokoro/voices/`.
+   - If you have custom voicepacks, place them in `voices/your_custom_file.pt`.
+
+6. **Install FFmpeg** (if you need transcoding/combining WAV files)
 
    - **Ubuntu/Debian**:
      ```bash
@@ -60,22 +107,7 @@ Below is a preview of the PDF to Audiobook conversion process:
      ```bash
      brew install ffmpeg
      ```
-   - **Windows**: Download and install from the [FFmpeg official site](https://ffmpeg.org/download.html).
-
-5. **Download Recommended Voice Model**
-
-   - Visit the [Hugging Face Piper Voices](https://huggingface.co/rhasspy/piper-voices/tree/main/en/en_US/libritts/high) page.
-   - Download the `en_US-libritts-high.onnx` model and its corresponding `en_US-libritts-high.onnx.json` file.
-   - Place the downloaded files in the `models/en/` directory:
-     ```bash
-     mkdir -p models/en
-     mv /path/to/en_US-libritts-high.onnx models/en/
-     mv /path/to/en_US-libritts-high.onnx.json models/en/
-     ```
-
-6. **Speaker ID and Voice Samples**
-   - Use **Speaker ID 8** for the recommended voice.
-   - Listen to available [voice samples](https://rhasspy.github.io/piper-samples/) for customization options.
+   - **Windows**: Download from the [FFmpeg official site](https://ffmpeg.org/download.html) and follow the installation instructions.
 
 ---
 
@@ -87,21 +119,27 @@ Below is a preview of the PDF to Audiobook conversion process:
    python main.py
    ```
 
-2. **Select PDF**
+2. **Select a PDF**
 
-   - Browse and select a PDF file.
-   - Choose extraction mode: _chapters_ or _full book_.
+   - Browse to choose your PDF file.
+   - Choose to extract by TOC-based chapters or by the entire book.
 
-3. **Configure Audio Settings**
+3. **Configure Kokoro TTS Settings**
 
-   - Select a Piper TTS model.
-   - Choose speaker IDs (optional).
-   - Adjust chunk size for compatibility with your system.
-   - Select audio output format (`.wav` or `.mp3`).
+   - Select the `.pth` model (e.g., `models/kokoro-v0_19.pth`).
+   - Pick a `.pt` voicepack (e.g., `voices/af_sarah.pt`).
+   - Adjust chunk size if you have limited VRAM.
+   - Choose output audio format (`.wav` or `.mp3`).
 
 4. **Generate Audiobook**
+
    - Click **Start Process**.
-   - Monitor progress in real-time with progress bars and logs.
+   - Track progress via logs, estimated time, and progress bars.
+   - Pause/Resume or Cancel at any point.
+
+5. **Enjoy Your Audiobook**
+
+   - Open the output folder to find your generated `.wav` or `.mp3` files.
 
 ---
 
@@ -109,61 +147,53 @@ Below is a preview of the PDF to Audiobook conversion process:
 
 ### PDF Extraction
 
-- **Automatic Cleaning**: Removes headers, footers, page numbers, and excessive whitespace.
-- **TOC Segmentation**: If the document has a TOC, chapters are split accordingly.
-- **Full-Book Mode**: Extracts the entire document if no TOC is available or desired.
+- Built atop [PyMuPDF](https://pymupdf.readthedocs.io/) for parsing text.
+- Cleans up headers, footers, page numbers, and multi-hyphen lines.
+- _Chapters vs. Whole:_
+  - If TOC is found, you can split into smaller .txt files.
+  - Otherwise, extract the entire text into one file.
 
-### Audio Generation
+### Kokoro TTS
 
-- **Chunk-Based Processing**: Splits text into manageable chunks for processing.
-- **Multi-Speaker Support**: Customize speaker IDs for varied narration.
-- **VRAM-Friendly**: Dynamically adjusts chunk size based on system performance.
+- **Text Normalization & Phonemization**
+  - Built-in text normalization for years, times, currency, etc.
+- **Token-Based Splitting**
+  - Splits text into < 510 tokens per chunk to accommodate model constraints.
+  - Joins all chunked audio into a single final file.
+- **Voicepacks (.pt)**
+  - Each voicepack provides a reference embedding for a given voice.
 
----
+### Low-VRAM/Speed Tips
 
-## Performance Optimization
-
-- **Use GPU (CUDA)**: Select GPU as the processing device for faster TTS generation.
-- **Adjust Chunk Size**: Reduce the chunk size if your system has limited VRAM.
-- **Experiment with Models**: Piper's performance depends on the selected model and speaker IDs.
+- **Chunk Size**
+  - If you run out of GPU memory, lower your chunk size from the default (2500) to something smaller (e.g., 1000 or 500).
+- **Device Selection**
+  - Choose `CUDA` if you have a compatible GPU, or `CPU` for CPU-only systems.
 
 ---
 
 ## Limitations
 
-- **PDF Quality**: Extraction accuracy depends on the structure of the source PDF.
-- **TTS Quality**: The quality of the generated audiobook may vary depending on the Piper model.
-- **Processing Time**: Large documents may require significant time to process.
-
----
-
-## Use Cases
-
-- **Academia**: Convert research papers and textbooks into audiobooks.
-- **Books**: Create audiobooks from eBooks or PDFs.
-- **Documentation**: Narrate user manuals or technical documents.
-- **Education**: Enhance learning with immersive reading.
-
----
-
-## Recommended Workflow
-
-1. Select a PDF file.
-2. Choose TOC-based or full-book extraction.
-3. Configure Piper TTS settings (model, speaker, chunk size).
-4. Generate the audiobook.
-5. Use the audiobook for immersive reading or standalone listening.
+1. **PDF Layout**
+   - Extraction can vary if the PDF has complex formatting or unusual text flow.
+2. **TTS Quality**
+   - The generated speech depends on the **Kokoro** model’s training and quality.
+3. **Processing Time**
+   - Long PDFs with complex text can take a while to extract and convert.
 
 ---
 
 ## Contributing
 
-Contributions are welcome! If you have ideas for improvements or new features, please open an issue or create a pull request.
+We welcome contributions!
+
+- Fork, branch, and submit a pull request.
+- Report bugs via [Issues](https://github.com/mateogon/pdf-narrator/issues).
 
 ---
 
-## Acknowledgments
+## License
 
-- [Piper TTS](https://github.com/rhasspy/piper): High-quality text-to-speech engine.
-- [PyMuPDF](https://pymupdf.readthedocs.io/): PDF parsing and text extraction library.
-- [ttkbootstrap](https://ttkbootstrap.readthedocs.io/): Modern GUI framework for Python applications.
+This project is released under the [MIT License](LICENSE.md).
+
+Enjoy converting your PDFs into immersive audiobooks powered by **Kokoro** TTS!

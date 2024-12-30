@@ -1,4 +1,5 @@
 # ui.py
+
 import tkinter as tk
 from tkinter import filedialog, messagebox
 from tkinter import scrolledtext
@@ -6,11 +7,13 @@ import ttkbootstrap as tb
 from ttkbootstrap.constants import *
 import os
 from extract import extract_book
-from generate_audiobook import generate_audiobooks
+# Import only Kokoro's audiobook generator
+from generate_audiobook_kokoro import generate_audiobooks_kokoro
 import sys
 import threading
 import time
 import json
+
 
 class LogRedirector:
     def __init__(self, write_callback):
@@ -29,10 +32,13 @@ class LogRedirector:
             self.is_logging = False  # Reset flag
 
     def flush(self):
-        pass  # No need to flush for tkinter text widgets
+        pass  # Not needed for tkinter text widgets
 
 
 class SourceFrame(tb.Frame):
+    """
+    Frame for PDF source selection and extraction options.
+    """
     def __init__(self, master, *args, **kwargs):
         super().__init__(master, *args, **kwargs)
 
@@ -44,7 +50,12 @@ class SourceFrame(tb.Frame):
         self.extract_mode = tk.StringVar(value="chapters")  # "chapters" or "whole"
 
         # Title
-        source_label = tb.Label(self, text="PDF Source & Extraction", style="Secondary.TLabel", font="-size 14 -weight bold")
+        source_label = tb.Label(
+            self, 
+            text="PDF Source & Extraction", 
+            style="Secondary.TLabel", 
+            font="-size 14 -weight bold"
+        )
         source_label.pack(pady=10)
 
         # PDF File Selection
@@ -74,12 +85,12 @@ class SourceFrame(tb.Frame):
         tb.Label(out_frame, text="Extracted Text Directory:").pack(side=LEFT, padx=5)
         tb.Entry(out_frame, textvariable=self.extracted_text_dir, state=READONLY).pack(side=LEFT, fill=X, expand=True, padx=5)
 
-
     def _browse_pdf(self):
-        # Use the directory of the current PDF path if set; otherwise, default to the project directory
+        """
+        Browse for a PDF file and update the PDF path + extracted text directory.
+        """
         initial_dir = os.path.dirname(self.pdf_path.get()) if self.pdf_path.get() else self.project_dir
 
-        # Open the file dialog with the initial directory set
         path = filedialog.askopenfilename(
             title="Select PDF File",
             initialdir=initial_dir,
@@ -100,9 +111,6 @@ class SourceFrame(tb.Frame):
                 if hasattr(app, 'update_audio_output_dir'):
                     app.update_audio_output_dir(book_name)
 
-
-
-
     # Methods to get user selections
     def get_pdf_path(self):
         return self.pdf_path.get()
@@ -118,56 +126,75 @@ class SourceFrame(tb.Frame):
 
 
 class AudioFrame(tb.Frame):
+    """
+    Frame for Kokoro model and voicepack selection + audiobook settings.
+    """
     def __init__(self, master, *args, **kwargs):
         super().__init__(master, *args, **kwargs)
         
         # Variables
         self.project_dir = os.path.dirname(os.path.abspath(__file__))  # Project directory
-        self.model_path = tk.StringVar(value="models/en/en_US-libritts-high.onnx")  # Default model
-        self.speaker_ids = tk.StringVar(value="8")  # Default speaker ID
-        self.chunk_size = tk.IntVar(value=2500)  # Default chunk size
+
+        # Default Kokoro model checkpoint
+        self.model_path = tk.StringVar(value="models/kokoro-v0_19.pth")
+        # Default voicepack (adjust if you like a different default)
+        self.voicepack_path = tk.StringVar(value="Kokoro/voices/af_sarah.pt")
+
+        self.chunk_size = tk.IntVar(value=510)    # Default chunk size
         self.audio_format = tk.StringVar(value=".wav")  # Default audio format
         self.audio_output_dir = tk.StringVar()  # Directory for audiobook files
         self.device = tk.StringVar(value="cuda")  # Default to GPU
 
         # Title
-        audio_label = tb.Label(self, text="Audio Settings", style="Secondary.TLabel", font="-size 14 -weight bold")
+        audio_label = tb.Label(
+            self, 
+            text="Kokoro Audio Settings", 
+            style="Secondary.TLabel", 
+            font="-size 14 -weight bold"
+        )
         audio_label.pack(pady=10)
-
 
         # Model Selection
         model_frame = tb.Frame(self)
         model_frame.pack(fill=X, pady=5, padx=5)
 
-        tb.Label(model_frame, text="Model:").pack(side=LEFT, padx=5)
-        models = self._get_model_files()
+        tb.Label(model_frame, text="Kokoro Model:").pack(side=LEFT, padx=5)
+        models = self._get_pth_files()  # We'll scan for .pth
         model_combo = tb.Combobox(
-            model_frame, textvariable=self.model_path, 
-            values=models, state="readonly"
+            model_frame, 
+            textvariable=self.model_path, 
+            values=models, 
+            state="readonly"
         )
         model_combo.pack(side=LEFT, fill=X, expand=True, padx=5)
 
-        # Speaker IDs
-        speaker_frame = tb.Frame(self)
-        speaker_frame.pack(fill=X, pady=5, padx=5)
+        # Voicepack Selection
+        voicepack_frame = tb.Frame(self)
+        voicepack_frame.pack(fill=X, pady=5, padx=5)
 
-        tb.Label(speaker_frame, text="Speaker IDs (comma-separated, leave blank if single-speaker):").pack(side=LEFT, padx=5)
-        tb.Entry(speaker_frame, textvariable=self.speaker_ids).pack(side=LEFT, fill=X, expand=True, padx=5)
+        tb.Label(voicepack_frame, text="Voicepack (.pt):").pack(side=LEFT, padx=5)
+        voicepacks = self._get_pt_files()  # We'll scan for .pt
+        voicepack_combo = tb.Combobox(
+            voicepack_frame,
+            textvariable=self.voicepack_path,
+            values=voicepacks,
+            state="readonly"
+        )
+        voicepack_combo.pack(side=LEFT, fill=X, expand=True, padx=5)
 
         # Chunk Size
         chunk_frame = tb.Frame(self)
         chunk_frame.pack(fill=X, pady=5, padx=5)
 
-        tb.Label(chunk_frame, text="Chunk Size (chars, default ~2500 for 6GB VRAM):").pack(side=LEFT, padx=5)
+        tb.Label(chunk_frame, text="Chunk Size (tokens):").pack(side=LEFT, padx=5)
         tb.Spinbox(chunk_frame, from_=500, to=5000, increment=500, textvariable=self.chunk_size, width=7).pack(side=LEFT, padx=5)
 
         # Output Directory
         output_frame = tb.Frame(self)
         output_frame.pack(fill=X, pady=5, padx=5)
 
-        tb.Label(output_frame, text="Audio Output Folder:").pack(side=LEFT, padx=5)
+        tb.Label(output_frame, text="Audiobook Output Folder:").pack(side=LEFT, padx=5)
         tb.Entry(output_frame, textvariable=self.audio_output_dir, state=READONLY).pack(side=LEFT, fill=X, expand=True, padx=5)
-
 
         # Audio Format
         format_frame = tb.Frame(self)
@@ -176,8 +203,10 @@ class AudioFrame(tb.Frame):
         tb.Label(format_frame, text="Output Format:").pack(side=LEFT, padx=5)
         formats = [".wav", ".mp3"]
         format_combo = tb.Combobox(
-            format_frame, textvariable=self.audio_format, 
-            values=formats, state="readonly"
+            format_frame, 
+            textvariable=self.audio_format, 
+            values=formats, 
+            state="readonly"
         )
         format_combo.pack(side=LEFT, fill=X, expand=True, padx=5)
 
@@ -189,24 +218,37 @@ class AudioFrame(tb.Frame):
         tb.Radiobutton(device_frame, text="GPU (CUDA)", variable=self.device, value="cuda").pack(side=LEFT, padx=5)
         tb.Radiobutton(device_frame, text="CPU", variable=self.device, value="cpu").pack(side=LEFT, padx=5)
 
-
-    def _get_model_files(self):
+    def _get_pth_files(self):
         """
-        Scan the 'models' directory in the project root for .onnx files.
-        Returns a list of paths to the found models.
+        Scan the 'models' directory in the project root for .pth files (Kokoro).
+        Returns a list of relative paths to the found models.
         """
         models_dir = os.path.join(self.project_dir, "models")
         model_files = []
 
-        # Walk through the models directory and subdirectories
         for root, dirs, files in os.walk(models_dir):
             for file in files:
-                if file.endswith(".onnx"):  # Check for .onnx files
-                    # Use relative paths for cleaner display
+                if file.endswith(".pth"):
                     relative_path = os.path.relpath(os.path.join(root, file), self.project_dir)
                     model_files.append(relative_path)
 
         return model_files
+
+    def _get_pt_files(self):
+        """
+        Scan the 'voices' directory for .pt voicepacks (Kokoro).
+        Returns a list of relative paths to the found voicepacks.
+        """
+        voices_dir = os.path.join(self.project_dir, "Kokoro/voices/")
+        voice_files = []
+
+        for root, dirs, files in os.walk(voices_dir):
+            for file in files:
+                if file.endswith(".pt"):
+                    relative_path = os.path.relpath(os.path.join(root, file), self.project_dir)
+                    voice_files.append(relative_path)
+
+        return voice_files
 
     def get_device(self):
         return self.device.get()
@@ -220,25 +262,24 @@ class AudioFrame(tb.Frame):
             os.makedirs(audio_output_dir, exist_ok=True)
             self.audio_output_dir.set(audio_output_dir)
         else:
-            # Reset to empty if no valid book name
             self.audio_output_dir.set("")
-
 
     def get_audio_output_dir(self):
         return self.audio_output_dir.get()
 
     def get_model_path(self):
-        # Return absolute path to the selected model
+        """
+        Returns the absolute path to the Kokoro .pth model file
+        """
         selected_model = self.model_path.get()
         return os.path.join(self.project_dir, selected_model) if selected_model else ""
 
-    def get_speaker_ids(self):
-        # Return a list of speaker IDs if provided, else None or empty list
-        val = self.speaker_ids.get().strip()
-        if val:
-            # Parse comma-separated IDs
-            return [v.strip() for v in val.split(",") if v.strip()]
-        return []
+    def get_voicepack_path(self):
+        """
+        Returns the absolute path to the Kokoro .pt voicepack file
+        """
+        selected_vp = self.voicepack_path.get()
+        return os.path.join(self.project_dir, selected_vp) if selected_vp else ""
 
     def get_chunk_size(self):
         return self.chunk_size.get()
@@ -247,24 +288,32 @@ class AudioFrame(tb.Frame):
         return self.audio_format.get()
 
 
-
 class ProgressFrame(tb.Frame):
+    """
+    Frame for showing progress bars, logs, and controlling start/pause/cancel.
+    """
     def __init__(self, master, app, *args, **kwargs):
         super().__init__(master, *args, **kwargs)
         self.app = app  # Reference to main AudiobookApp
         self.pause_event = threading.Event()
         self.pause_event.set()
+
         # Extraction progress
         self.extract_progress = tk.DoubleVar(value=0.0)
         # Generation progress
         self.audio_progress = tk.DoubleVar(value=0.0)
         self.status_text = tk.StringVar(value="Waiting...")
         
-        # Add a variable and label for estimated time
+        # Estimated time label
         self.estimated_time_text = tk.StringVar(value="Estimated time remaining: N/A")
         
         # Title
-        prog_label = tb.Label(self, text="Progress & Logs", style="Secondary.TLabel", font="-size 14 -weight bold")
+        prog_label = tb.Label(
+            self, 
+            text="Progress & Logs", 
+            style="Secondary.TLabel", 
+            font="-size 14 -weight bold"
+        )
         prog_label.pack(pady=10)
 
         # Status
@@ -274,7 +323,7 @@ class ProgressFrame(tb.Frame):
         tb.Label(status_frame, text="Status:").pack(side=LEFT, padx=5)
         tb.Label(status_frame, textvariable=self.status_text).pack(side=LEFT, padx=5)
         
-        # Add the estimated time label below the status
+        # Estimated time label
         tb.Label(status_frame, textvariable=self.estimated_time_text).pack(side=LEFT, padx=15)
 
         # Progress Bars
@@ -286,6 +335,7 @@ class ProgressFrame(tb.Frame):
 
         tb.Label(pb_frame, text="Audio Generation:").pack(anchor=W, pady=(10, 0))
         tb.Progressbar(pb_frame, variable=self.audio_progress, maximum=100).pack(fill=X, pady=2)
+
         self.percentage_text = tk.StringVar(value="0% complete")
         tb.Label(pb_frame, textvariable=self.percentage_text).pack(anchor=W, pady=(5, 0))
 
@@ -339,7 +389,7 @@ class ProgressFrame(tb.Frame):
         self.cancellation_flag = False  # Reset cancellation flag
 
         try:
-            # Extract text
+            # 1) Extract text
             pdf_path = self.app.source_frame.get_pdf_path()
             use_toc = self.app.source_frame.get_use_toc()
             extract_mode = self.app.source_frame.get_extract_mode()
@@ -356,12 +406,12 @@ class ProgressFrame(tb.Frame):
             self.log_message(f"Text extraction completed. Files saved to: {output_dir}")
             self.update_extract_progress(100)
 
-            # Generate audiobook
+            # 2) Generate audiobook with Kokoro
             self.set_status("Generating audiobook...")
             self.update_audio_progress(10)
 
             model_path = self.app.audio_frame.get_model_path()
-            speaker_ids = self.app.audio_frame.get_speaker_ids()
+            voicepack_path = self.app.audio_frame.get_voicepack_path()
             chunk_size = self.app.audio_frame.get_chunk_size()
             audio_format = self.app.audio_frame.get_audio_format()
             audio_output_dir = self.app.audio_frame.get_audio_output_dir()
@@ -372,20 +422,20 @@ class ProgressFrame(tb.Frame):
                     raise Exception("Process canceled by user.")
                 self.update_audio_progress(progress)
                 self.percentage_text.set(f"{progress}% complete")
+
             def time_estimate_callback(seconds_left):
                 # Ensure thread-safe call to UI
                 self.after(0, self.set_estimated_time, seconds_left)
                         
-            generate_audiobooks(
+            generate_audiobooks_kokoro(
                 input_dir=output_dir,
                 model_path=model_path,
-                speaker_ids=speaker_ids,
-                chunk_size=chunk_size,
+                voicepack_path=voicepack_path,
                 audio_format=audio_format,
                 output_dir=audio_output_dir,
                 progress_callback=generation_progress_callback,
                 device=device,
-                cancellation_flag=self.cancellation_flag,
+                cancellation_flag=lambda: self.cancellation_flag,  # pass a lambda
                 update_estimate_callback=time_estimate_callback,
                 pause_event=self.pause_event
             )
@@ -412,17 +462,17 @@ class ProgressFrame(tb.Frame):
         self.resume_button.config(state=DISABLED)
         self.pause_button.config(state=NORMAL)
         self.log_message("Process resumed.")
+
     def _cancel_process(self):
         self.log_message("Canceling process...")
         self.cancellation_flag = True
         self.set_status("Process canceling...")
 
         if self.process_thread and self.process_thread.is_alive():
-            self.process_thread.join(timeout=1)  # Wait briefly to ensure the thread exits
+            self.process_thread.join(timeout=1)  # Wait briefly
             self.running = False
             self.start_button.config(state=NORMAL)
             self.cancel_button.config(state=DISABLED)
-
 
     def log_message(self, msg):
         self.log_text.insert(tk.END, msg + "\n")
@@ -436,12 +486,10 @@ class ProgressFrame(tb.Frame):
 
     def update_audio_progress(self, value):
         self.audio_progress.set(value)
-    def set_estimated_time(self, seconds_left):
-        # Convert seconds to a more readable format (H:M:S)
-        if seconds_left < 0:
-            # If for some reason it's negative (rounding), just show 0
-            seconds_left = 0
 
+    def set_estimated_time(self, seconds_left):
+        if seconds_left < 0:
+            seconds_left = 0
         m, s = divmod(int(seconds_left), 60)
         h, m = divmod(m, 60)
         if h > 0:
@@ -450,21 +498,28 @@ class ProgressFrame(tb.Frame):
             time_str = f"{m}m {s}s"
         else:
             time_str = f"{s}s"
-
         self.estimated_time_text.set(f"Estimated time remaining: {time_str}")
 
 
 class AudiobookApp(tb.Window):
+    """
+    Main application window, uses a ttkbootstrap Notebook with three tabs:
+      1) Source (PDF extraction)
+      2) Audio (Kokoro model/voicepack selection)
+      3) Progress & Logs
+    """
     CONFIG_FILE = "config.json"
+
     def __init__(self, *args, **kwargs):
         self.selected_theme = self._load_theme_from_config()
-
         super().__init__(*args, themename=self.selected_theme, **kwargs)
-        self.title("PDF Narrator")
+
+        self.title("PDF Narrator (Kokoro Edition)")
         self.geometry("1000x800")
 
-        # Set up WM_DELETE_WINDOW protocol
-        self.protocol("WM_DELETE_WINDOW", self.on_close)  # Attach the close event handler       
+        # Handle window close
+        self.protocol("WM_DELETE_WINDOW", self.on_close)
+
         # Header
         header_frame = tb.Frame(self)
         header_frame.pack(fill=X, pady=10)
@@ -472,7 +527,7 @@ class AudiobookApp(tb.Window):
         title_label = tb.Label(header_frame, text="PDF Narrator", font="-size 16 -weight bold")
         title_label.pack()
         
-        subtitle_label = tb.Label(header_frame, text="Convert your PDFs into narrated audiobooks with ease")
+        subtitle_label = tb.Label(header_frame, text="Convert your PDFs into narrated audiobooks (Kokoro)")
         subtitle_label.pack(pady=(5, 0))
 
         # Notebook
@@ -481,13 +536,13 @@ class AudiobookApp(tb.Window):
 
         self.source_frame = SourceFrame(self.notebook)
         self.audio_frame = AudioFrame(self.notebook)
-        self.progress_frame = ProgressFrame(self.notebook, app=self)  # Pass self as app reference
+        self.progress_frame = ProgressFrame(self.notebook, app=self)
 
         self.notebook.add(self.source_frame, text="Source")
         self.notebook.add(self.audio_frame, text="Audio")
         self.notebook.add(self.progress_frame, text="Progress & Logs")
 
-        # Footer Frame
+        # Footer
         footer_frame = tb.Frame(self)
         footer_frame.pack(fill=X, pady=5)
         
@@ -495,9 +550,12 @@ class AudiobookApp(tb.Window):
         self.open_output_button.pack(side=LEFT, padx=10)
 
         self.open_audio_output_button = tb.Button(
-            footer_frame, text="Open Audiobook Folder", command=self._open_audiobook_folder
+            footer_frame, 
+            text="Open Audiobook Folder", 
+            command=self._open_audiobook_folder
         )
         self.open_audio_output_button.pack(side=LEFT, padx=10)
+
         # Theme Selector
         theme_selector_frame = tb.Frame(footer_frame)
         theme_selector_frame.pack(side=RIGHT, padx=10)
@@ -506,20 +564,23 @@ class AudiobookApp(tb.Window):
         self.theme_var = tk.StringVar(value=self.selected_theme)
         themes = tb.Style().theme_names()
         self.theme_combo = tb.Combobox(
-            theme_selector_frame, textvariable=self.theme_var, values=themes, state="readonly", width=15
+            theme_selector_frame, 
+            textvariable=self.theme_var, 
+            values=themes, 
+            state="readonly", 
+            width=15
         )
         self.theme_combo.pack(side=LEFT, padx=5)
         self.theme_combo.bind("<<ComboboxSelected>>", self._change_theme)
 
-        exit_button = tb.Button(footer_frame, text="Exit", command=self.progress_frame.app.on_close)
+        exit_button = tb.Button(footer_frame, text="Exit", command=self.on_close)
         exit_button.pack(side=RIGHT, padx=10)
 
         self.load_config()
-        
+
     def _open_output_folder(self):
-        output_dir = self.source_frame.get_extracted_text_dir()  # Use correct method
+        output_dir = self.source_frame.get_extracted_text_dir()
         if output_dir and os.path.isdir(output_dir):
-            # Open folder in file explorer
             if os.name == 'nt':
                 os.startfile(output_dir)
             elif os.name == 'posix':
@@ -530,7 +591,6 @@ class AudiobookApp(tb.Window):
     def _open_audiobook_folder(self):
         audio_dir = self.audio_frame.get_audio_output_dir()
         if audio_dir and os.path.isdir(audio_dir):
-            # Open folder in file explorer
             if os.name == 'nt':
                 os.startfile(audio_dir)
             elif os.name == 'posix':
@@ -539,18 +599,16 @@ class AudiobookApp(tb.Window):
             messagebox.showwarning("Warning", "No valid audiobook output directory selected.")
 
     def _change_theme(self, event):
-        # Update the app theme dynamically using ttkbootstrap's set_theme method
         new_theme = self.theme_var.get()
-        tb.Style().theme_use(new_theme)  # Change the theme dynamically
-        self.selected_theme = new_theme  # Save the new theme for config saving
+        tb.Style().theme_use(new_theme)
+        self.selected_theme = new_theme
 
     def _load_theme_from_config(self):
-        # Load theme from config
         if os.path.exists(self.CONFIG_FILE):
             try:
                 with open(self.CONFIG_FILE, 'r') as f:
                     config = json.load(f)
-                    return config.get("theme", "flatly")  # Default to "flatly" if no theme is saved
+                    return config.get("theme", "flatly")
             except Exception as e:
                 print(f"Failed to load theme from config: {e}")
         return "flatly"  # Default theme
@@ -565,19 +623,19 @@ class AudiobookApp(tb.Window):
                     pdf_path = config.get("pdf_path", "")
                     self.source_frame.pdf_path.set(pdf_path)
 
-                    # Dynamically calculate extracted text directory
+                    # Update extracted text directory if PDF path is known
                     if pdf_path:
                         book_name = os.path.splitext(os.path.basename(pdf_path))[0]
                         extracted_text_dir = os.path.join(self.source_frame.project_dir, "extracted_pdf", book_name)
                         self.source_frame.extracted_text_dir.set(extracted_text_dir)
-
-                        # Dynamically calculate audio output directory
                         self.update_audio_output_dir(book_name)
 
-                    # Load audio settings
-                    self.audio_frame.model_path.set(config.get("model_path", "models/en/en_US-libritts-high.onnx"))
-                    self.audio_frame.speaker_ids.set(",".join(config.get("speaker_ids", [])))  # Rejoin as string
-                    self.audio_frame.chunk_size.set(config.get("chunk_size", 2500))
+                    # Load Kokoro model
+                    self.audio_frame.model_path.set(config.get("model_path", "models/kokoro-v0_19.pth"))
+                    # Load voicepack
+                    self.audio_frame.voicepack_path.set(config.get("voicepack_path", "Kokoro/voices/af_sarah.pt"))
+                    # Load other settings
+                    self.audio_frame.chunk_size.set(config.get("chunk_size", 510))
                     self.audio_frame.audio_format.set(config.get("audio_format", ".wav"))
             except Exception as e:
                 print(f"Failed to load config: {e}")
@@ -586,7 +644,7 @@ class AudiobookApp(tb.Window):
         config = {
             "pdf_path": self.source_frame.get_pdf_path(),
             "model_path": self.audio_frame.get_model_path(),
-            "speaker_ids": ",".join(self.audio_frame.get_speaker_ids()),
+            "voicepack_path": self.audio_frame.get_voicepack_path(),
             "chunk_size": self.audio_frame.get_chunk_size(),
             "audio_format": self.audio_frame.get_audio_format(),
             "theme": self.selected_theme,
@@ -601,6 +659,6 @@ class AudiobookApp(tb.Window):
         self.audio_frame.update_audio_output_dir(book_name)
 
     def on_close(self):
-        print("Application is closing.")  # Debug print
-        self.save_config()  # Save the current configuration
-        self.destroy()  # Ensure the app closes
+        print("Application is closing.")  # Debug
+        self.save_config()
+        self.destroy()
