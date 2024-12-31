@@ -10,7 +10,10 @@ Transform your PDF documents into audiobooks effortlessly using **advanced text 
 
 2. **Audio Sample**  
    Listen to a short sample of the generated audiobook:  
-   https://github.com/mateogon/pdf-narrator/blob/main/assets/demo.mp4
+
+https://github.com/user-attachments/assets/02953345-aceb-41f3-babf-1d1606c76641
+
+
 
 ## Features
 
