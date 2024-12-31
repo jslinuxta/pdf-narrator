@@ -141,7 +141,7 @@ def structure_text_by_toc(toc, all_pages_text):
         else:
             end_page_idx = len(all_pages_text) - 1
 
-        chapter_pages = all_pages_text[start_page_idx:end_page_idx + 1]
+        chapter_pages = all_pages_text[start_page_idx:end_page_idx]
         chapter_text = clean_text("\n".join(chapter_pages))
         clean_title = title.strip('\r\n')
 
