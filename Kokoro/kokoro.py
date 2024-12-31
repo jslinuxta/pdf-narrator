@@ -84,7 +84,7 @@ def normalize_text(text):
     text = re.sub(r'(?i)(?<=[A-Z])\.(?=[A-Z])', '-', text)  # Replace periods between uppercase letters with hyphens (e.g., "A.B." -> "A-B")
     return text.strip()
 
-def chunk_text(text, lang, max_tokens=500):
+def chunk_text(text, lang, max_tokens=510):
     # Phonemize and tokenize the entire text
     phonemized_text = phonemize(text, lang)
     tokenized_text = tokenize(phonemized_text)
