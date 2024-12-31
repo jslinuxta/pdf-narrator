@@ -38,16 +38,6 @@ https://github.com/user-attachments/assets/02953345-aceb-41f3-babf-1d1606c76641
 
 ---
 
-## Demo
-
-1. **Screenshot**  
-   Check out the screenshot above (`assets/demo.png`) for a sneak peek at the GUI.
-
-2. **Audio Sample**  
-   Listen to a short sample of the output in [`assets/demo.wav`](assets/demo.wav). This file demonstrates the clarity and natural tone possible with Kokoro TTS.
-
----
-
 ## Prerequisites
 
 - **Python 3.8+**
