@@ -23,8 +23,9 @@ Thumbs.db
 
 *.pth
 
-# Ignore config file
-config.json
+# Ignore config.json globally, but allow specific files back
+/config.json
+!/Kokoro/config.json
 
 # Ignore all files in the models directory and its subdirectories
 models/**
