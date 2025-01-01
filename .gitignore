@@ -36,3 +36,5 @@ models/**
 !models/**/.gitkeep
 
 Kokoro/*.wav
+*.wav
+test_text.txt
