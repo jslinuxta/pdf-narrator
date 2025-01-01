@@ -1,7 +1,8 @@
 # ui.py
 
 import tkinter as tk
-from tkinter import filedialog, messagebox
+from tkinter import filedialog
+from PyQt6.QtWidgets import QApplication, QFileDialog
 from tkinter import scrolledtext
 import ttkbootstrap as tb
 from ttkbootstrap.constants import *
@@ -86,30 +87,27 @@ class SourceFrame(tb.Frame):
         tb.Entry(out_frame, textvariable=self.extracted_text_dir, state=READONLY).pack(side=LEFT, fill=X, expand=True, padx=5)
 
     def _browse_pdf(self):
-        """
-        Browse for a PDF file and update the PDF path + extracted text directory.
-        """
+        # Initialize Qt application
+        qt_app = QApplication.instance() or QApplication(sys.argv)
+        
         initial_dir = os.path.dirname(self.pdf_path.get()) if self.pdf_path.get() else self.project_dir
-
-        path = filedialog.askopenfilename(
-            title="Select PDF File",
-            initialdir=initial_dir,
-            filetypes=[("PDF Files", "*.pdf")]
-        )
-
+        
+        path = QFileDialog.getOpenFileName(
+            None,
+            "Select PDF File",
+            initial_dir,
+            "PDF Files (*.pdf)"
+        )[0]
+        
         if path:
             self.pdf_path.set(path)
-            # Update extracted text directory dynamically based on the book name
             book_name = os.path.splitext(os.path.basename(path))[0]
             extracted_text_dir = os.path.join(self.project_dir, "extracted_pdf", book_name)
             self.extracted_text_dir.set(extracted_text_dir)
             os.makedirs(extracted_text_dir, exist_ok=True)
 
-            # Notify the parent app to update the audio output directory as well
-            if self.master.master:  # self.master is the Notebook; self.master.master is the main app
-                app = self.master.master
-                if hasattr(app, 'update_audio_output_dir'):
-                    app.update_audio_output_dir(book_name)
+            if self.master.master and hasattr(self.master.master, 'update_audio_output_dir'):
+                self.master.master.update_audio_output_dir(book_name)
 
     # Methods to get user selections
     def get_pdf_path(self):
@@ -546,7 +544,7 @@ class AudiobookApp(tb.Window):
         footer_frame = tb.Frame(self)
         footer_frame.pack(fill=X, pady=5)
         
-        self.open_output_button = tb.Button(footer_frame, text="Open Output Folder", command=self._open_output_folder)
+        self.open_output_button = tb.Button(footer_frame, text="Open Extracted Text Folder", command=self._open_output_folder)
         self.open_output_button.pack(side=LEFT, padx=10)
 
         self.open_audio_output_button = tb.Button(
