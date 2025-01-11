@@ -202,25 +202,31 @@ If you’re using a different Python or CUDA version, or if the precompiled whee
    python main.py
    ```
 
-2. **Select a PDF**
+2. **Select a Mode**
 
-   - Browse to choose your PDF file.
-   - Choose to extract by TOC-based chapters or by the entire book.
+   - **Single PDF**: Choose a specific PDF file and extract its text.
+   - **Batch PDFs**: Select a folder with multiple PDFs. The app processes all PDFs in the folder (and subfolders).
+   - **Skip Extraction**: Use pre-extracted text files. The app retains the folder structure for audiobook generation.
 
-3. **Configure Kokoro TTS Settings**
+3. **Extract Text (for Single/Batch Modes)**
+
+   - If TOC is available, extract by chapters. Otherwise, extract the entire book.
+   - For batch processing, the app maintains the relative folder structure for all PDFs.
+
+4. **Configure Kokoro TTS Settings**
 
    - Select the `.pth` model (e.g., `models/kokoro-v0_19.pth`).
    - Pick a `.pt` voicepack (e.g., `voices/af_sarah.pt`).
    - Adjust chunk size if you have limited VRAM.
    - Choose output audio format (`.wav` or `.mp3`).
 
-4. **Generate Audiobook**
+5. **Generate Audiobook**
 
    - Click **Start Process**.
    - Track progress via logs, estimated time, and progress bars.
    - Pause/Resume or Cancel at any point.
 
-5. **Enjoy Your Audiobook**
+6. **Enjoy Your Audiobook**
 
    - Open the output folder to find your generated `.wav` or `.mp3` files.
 
@@ -235,6 +241,22 @@ If you’re using a different Python or CUDA version, or if the precompiled whee
 - _Chapters vs. Whole:_
   - If TOC is found, you can split into smaller .txt files.
   - Otherwise, extract the entire text into one file.
+
+#### **Three Modes for PDF/Text Processing**
+
+1. **Single PDF**
+
+   - Extract text from one PDF file.
+   - Output directory: `extracted_pdf/<book_name>`.
+
+2. **Batch PDFs**
+
+   - Recursively process all PDFs in a selected folder.
+   - Maintains folder structure under `extracted_pdf/`.
+
+3. **Skip Extraction**
+   - Use pre-extracted text files organized in folders.
+   - Input folder structure is mirrored for audiobook output.
 
 ### Kokoro TTS
 
