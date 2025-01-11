@@ -831,30 +831,51 @@ class AudiobookApp(tb.Window):
                 with open(self.CONFIG_FILE, 'r') as f:
                     config = json.load(f)
 
-                    # Load PDF path
-                    pdf_path = config.get("pdf_path", "")
-                    self.source_frame.pdf_path.set(pdf_path)
+                    # Load source option and paths
+                    self.source_frame.source_option.set(config.get("source_option", "single"))
+                    self.source_frame.pdf_path.set(config.get("pdf_path", ""))
+                    self.source_frame.pdf_folder.set(config.get("pdf_folder", ""))
+                    self.source_frame.manual_extracted_dir.set(config.get("manual_extracted_dir", ""))
+                    self.source_frame.extracted_text_dir.set(config.get("extracted_text_dir", ""))
 
-                    # Update extracted text directory if PDF path is known
-                    if pdf_path:
-                        book_name = os.path.splitext(os.path.basename(pdf_path))[0]
-                        extracted_text_dir = os.path.join(self.source_frame.project_dir, "extracted_pdf", book_name)
-                        self.source_frame.extracted_text_dir.set(extracted_text_dir)
+                    # Update audio output directory based on source option
+                    if config["source_option"] == "single" and config.get("pdf_path"):
+                        book_name = os.path.splitext(os.path.basename(config["pdf_path"]))[0]
+                    elif config["source_option"] == "batch" and config.get("pdf_folder"):
+                        book_name = os.path.basename(config["pdf_folder"].rstrip(os.sep))
+                    elif config["source_option"] == "skip" and config.get("manual_extracted_dir"):
+                        book_name = os.path.basename(config["manual_extracted_dir"].rstrip(os.sep))
+                    else:
+                        book_name = ""
+                    
+                    if book_name:
                         self.update_audio_output_dir(book_name)
 
-                    # Load Kokoro model
+                    # Load audio settings
                     self.audio_frame.model_path.set(config.get("model_path", "models/kokoro-v0_19.pth"))
-                    # Load voicepack
                     self.audio_frame.voicepack_path.set(config.get("voicepack_path", "Kokoro/voices/af_sarah.pt"))
-                    # Load other settings
                     self.audio_frame.chunk_size.set(config.get("chunk_size", 510))
                     self.audio_frame.audio_format.set(config.get("audio_format", ".wav"))
+
+                    # Load theme
+                    self.selected_theme = config.get("theme", "flatly")
+                    self.theme_var.set(self.selected_theme)
+                    tb.Style().theme_use(self.selected_theme)
+
+                    # Update UI based on the loaded source option
+                    self.source_frame._update_ui()
+
             except Exception as e:
                 print(f"Failed to load config: {e}")
 
+
     def save_config(self):
         config = {
+            "source_option": self.source_frame.get_source_option(),  # Save selected mode
             "pdf_path": self.source_frame.get_pdf_path(),
+            "pdf_folder": self.source_frame.get_pdf_folder(),
+            "manual_extracted_dir": self.source_frame.get_manual_extracted_dir(),
+            "extracted_text_dir": self.source_frame.get_extracted_text_dir(),  # Save extracted text directory
             "model_path": self.audio_frame.get_model_path(),
             "voicepack_path": self.audio_frame.get_voicepack_path(),
             "chunk_size": self.audio_frame.get_chunk_size(),
@@ -866,6 +887,7 @@ class AudiobookApp(tb.Window):
                 json.dump(config, f, indent=4)
         except Exception as e:
             print(f"Failed to save config: {e}")
+
 
     def update_audio_output_dir(self, book_name):
         self.audio_frame.update_audio_output_dir(book_name)
