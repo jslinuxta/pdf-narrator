@@ -90,18 +90,35 @@ def generate_audiobooks(input_dir, model_path, speaker_ids=None, chunk_size=2500
     total_characters_processed = 0
     total_time_spent = 0.0
 
+    recent_times = []
+
     def chunk_done_callback(chars_in_chunk, chunk_duration):
-        nonlocal total_characters_processed, total_time_spent
+        nonlocal total_characters_processed, total_time_spent, recent_times
+
+        # Update totals
         total_characters_processed += chars_in_chunk
         total_time_spent += chunk_duration
 
-        # Compute estimated remaining time
-        if total_characters_processed > 0:
-            avg_time_per_char = total_time_spent / total_characters_processed
-            chars_left = total_text_length - total_characters_processed
-            remaining_time = avg_time_per_char * chars_left
-            if update_estimate_callback:
-                update_estimate_callback(remaining_time)
+        # Update sliding window of recent times
+        recent_times.append(chunk_duration / chars_in_chunk)
+        if len(recent_times) > 5:  # Keep only the last 5 records
+            recent_times.pop(0)
+
+        # Weighted average of recent and overall averages
+        recent_avg_time_per_char = sum(recent_times) / len(recent_times)
+        overall_avg_time_per_char = total_time_spent / total_characters_processed
+        weighted_avg_time_per_char = (recent_avg_time_per_char * 0.7 + overall_avg_time_per_char * 0.3)
+
+        # Estimate remaining time
+        chars_left = total_text_length - total_characters_processed
+        remaining_time = weighted_avg_time_per_char * chars_left
+
+        # Clamp remaining time to avoid premature zero
+        remaining_time = max(remaining_time, weighted_avg_time_per_char * 100)
+
+        # Pass updated time to the callback
+        if update_estimate_callback:
+            update_estimate_callback(remaining_time)
 
     total_files = len(files)
     generated_files = []

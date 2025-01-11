@@ -209,14 +209,18 @@ def extract_book(pdf_path, use_toc=True, extract_mode="chapters", output_base_di
     book_name = os.path.splitext(os.path.basename(pdf_path))[0]
 
     # Output directory structure: extracted_pdf/<book_name>/
-    output_dir = os.path.join(output_base_dir, book_name)
+    output_dir = output_base_dir
     os.makedirs(output_dir, exist_ok=True)
 
     if use_toc and deduplicated_t and extract_mode == "chapters":
+        output_dir = os.path.join(output_base_dir, book_name)
+        os.makedirs(output_dir, exist_ok=True)
+
         chapters = structure_text_by_toc(deduplicated_t, all_pages_text)
         save_chapters(chapters, book_name, output_dir)
     else:
         # Either no TOC or user wants the whole book
+        print("Output dir is: ", output_dir)
         save_whole_book(book_name, all_pages_text, output_dir)
 
     doc.close()

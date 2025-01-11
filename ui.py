@@ -45,10 +45,21 @@ class SourceFrame(tb.Frame):
 
         # Variables
         self.project_dir = os.path.dirname(os.path.abspath(__file__))  # Project directory
+
+        # For single PDF or batch folder
         self.pdf_path = tk.StringVar()
+        self.pdf_folder = tk.StringVar()
+
+        # For skipping extraction (manual extracted folder)
+        self.manual_extracted_dir = tk.StringVar()
+
+        # Extracted text options
         self.extracted_text_dir = tk.StringVar()  # Directory for extracted text
         self.use_toc = tk.BooleanVar(value=True)
         self.extract_mode = tk.StringVar(value="chapters")  # "chapters" or "whole"
+
+        # Radio variable to decide between modes: single, batch, or skip extraction
+        self.source_option = tk.StringVar(value="single")  
 
         # Title
         source_label = tb.Label(
@@ -59,59 +70,191 @@ class SourceFrame(tb.Frame):
         )
         source_label.pack(pady=10)
 
-        # PDF File Selection
-        file_frame = tb.Frame(self)
-        file_frame.pack(pady=5, fill=X)
-        
-        tb.Label(file_frame, text="Select PDF File:").pack(side=LEFT, padx=5)
-        tb.Entry(file_frame, textvariable=self.pdf_path, state=READONLY).pack(side=LEFT, fill=X, expand=True, padx=5)
-        tb.Button(file_frame, text="Browse", command=self._browse_pdf).pack(side=LEFT, padx=5)
+        # Source option radio buttons
+        source_option_frame = tb.Labelframe(self, text="Choose Source Option")
+        source_option_frame.pack(fill=tk.X, pady=5, padx=5)
+
+        tb.Radiobutton(
+            source_option_frame, 
+            text="Single PDF", 
+            variable=self.source_option, 
+            value="single",
+            command=self._update_ui
+        ).pack(anchor=tk.W, padx=5, pady=2)
+
+        tb.Radiobutton(
+            source_option_frame, 
+            text="Batch PDFs (select folder)", 
+            variable=self.source_option, 
+            value="batch",
+            command=self._update_ui
+        ).pack(anchor=tk.W, padx=5, pady=2)
+
+        tb.Radiobutton(
+            source_option_frame, 
+            text="Skip Extraction (use existing text folder)", 
+            variable=self.source_option, 
+            value="skip",
+            command=self._update_ui
+        ).pack(anchor=tk.W, padx=5, pady=2)
+
+        # Single PDF selection
+        single_frame = tb.Frame(self)
+        single_frame.pack(pady=5, fill=tk.X)
+        self.single_frame = single_frame  # For toggling
+
+        tb.Label(single_frame, text="Select PDF File (Single):").pack(side=tk.LEFT, padx=5)
+        tb.Entry(single_frame, textvariable=self.pdf_path, state=tk.NORMAL).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=5)
+        tb.Button(single_frame, text="Browse", command=self._browse_single_pdf).pack(side=tk.LEFT, padx=5)
+
+        # Batch PDF folder selection
+        batch_frame = tb.Frame(self)
+        batch_frame.pack(pady=5, fill=tk.X)
+        self.batch_frame = batch_frame  # For toggling
+
+        tb.Label(batch_frame, text="Select Folder (Batch):").pack(side=tk.LEFT, padx=5)
+        tb.Entry(batch_frame, textvariable=self.pdf_folder, state=tk.NORMAL).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=5)
+        tb.Button(batch_frame, text="Browse", command=self._browse_pdf_folder).pack(side=tk.LEFT, padx=5)
+
+        # Manual extracted folder (skip extraction)
+        skip_frame = tb.Frame(self)
+        skip_frame.pack(pady=5, fill=tk.X)
+        self.skip_frame = skip_frame  # For toggling
+
+        tb.Label(skip_frame, text="Existing Text Folder:").pack(side=tk.LEFT, padx=5)
+        tb.Entry(skip_frame, textvariable=self.manual_extracted_dir, state=tk.NORMAL).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=5)
+        tb.Button(skip_frame, text="Browse", command=self._browse_extracted_folder).pack(side=tk.LEFT, padx=5)
 
         # TOC & Extraction Mode
-        options_frame = tb.Labelframe(self, text="Extraction Options")
-        options_frame.pack(fill=X, pady=10, padx=5)
+        options_frame = tb.Labelframe(self, text="Extraction Options (only when extracting)")
+        options_frame.pack(fill=tk.X, pady=10, padx=5)
 
         toc_check = tb.Checkbutton(options_frame, text="Use TOC (if available)", variable=self.use_toc)
-        toc_check.pack(anchor=W, padx=5, pady=5)
+        toc_check.pack(anchor=tk.W, padx=5, pady=5)
         
         mode_frame = tb.Frame(options_frame)
-        mode_frame.pack(anchor=W, padx=5, pady=5)
-        tb.Radiobutton(mode_frame, text="Extract by Chapters", variable=self.extract_mode, value="chapters").pack(side=LEFT)
-        tb.Radiobutton(mode_frame, text="Extract Whole Book", variable=self.extract_mode, value="whole").pack(side=LEFT, padx=10)
+        mode_frame.pack(anchor=tk.W, padx=5, pady=5)
+        tb.Radiobutton(mode_frame, text="Extract by Chapters", variable=self.extract_mode, value="chapters").pack(side=tk.LEFT)
+        tb.Radiobutton(mode_frame, text="Extract Whole Book", variable=self.extract_mode, value="whole").pack(side=tk.LEFT, padx=10)
 
-        # Extracted Text Directory
+        # Extracted Text Directory (auto-determined if single or batch PDF is used)
         out_frame = tb.Frame(self)
-        out_frame.pack(pady=5, fill=X)
+        out_frame.pack(pady=5, fill=tk.X)
         
-        tb.Label(out_frame, text="Extracted Text Directory:").pack(side=LEFT, padx=5)
-        tb.Entry(out_frame, textvariable=self.extracted_text_dir, state=READONLY).pack(side=LEFT, fill=X, expand=True, padx=5)
+        tb.Label(out_frame, text="Extracted Text Directory (auto):").pack(side=tk.LEFT, padx=5)
+        tb.Entry(out_frame, textvariable=self.extracted_text_dir, state=tk.NORMAL).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=5)
 
-    def _browse_pdf(self):
-        # Initialize Qt application
+        # Initialize UI
+        self._update_ui()
+
+    def _update_ui(self):
+        """
+        Enable/disable controls based on the selected source option.
+        """
+        option = self.source_option.get()
+
+        # Toggle visibility based on the mode
+        if option == "single":
+            self._toggle_frame(self.single_frame, enable=True)
+            self._toggle_frame(self.batch_frame, enable=False)
+            self._toggle_frame(self.skip_frame, enable=False)
+        elif option == "batch":
+            self._toggle_frame(self.single_frame, enable=False)
+            self._toggle_frame(self.batch_frame, enable=True)
+            self._toggle_frame(self.skip_frame, enable=False)
+        elif option == "skip":
+            self._toggle_frame(self.single_frame, enable=False)
+            self._toggle_frame(self.batch_frame, enable=False)
+            self._toggle_frame(self.skip_frame, enable=True)
+
+    def _toggle_frame(self, frame, enable=True):
+        """
+        Enable or disable all widgets in a frame.
+        """
+        state = tk.NORMAL if enable else tk.DISABLED
+        for child in frame.winfo_children():
+            child.configure(state=state)
+
+    def _browse_single_pdf(self):
+        # Initialize or reuse the existing QApplication instance
         qt_app = QApplication.instance() or QApplication(sys.argv)
-        
-        initial_dir = os.path.dirname(self.pdf_path.get()) if self.pdf_path.get() else self.project_dir
-        
-        path = QFileDialog.getOpenFileName(
+
+        # Open QFileDialog to select a single PDF file
+        path, _ = QFileDialog.getOpenFileName(
             None,
             "Select PDF File",
-            initial_dir,
+            self.project_dir,
             "PDF Files (*.pdf)"
-        )[0]
-        
-        if path:
+        )
+        if path:  # If a file was selected
             self.pdf_path.set(path)
+
+            # Auto-populate extracted_text_dir for the single PDF
             book_name = os.path.splitext(os.path.basename(path))[0]
             extracted_text_dir = os.path.join(self.project_dir, "extracted_pdf", book_name)
             self.extracted_text_dir.set(extracted_text_dir)
-            os.makedirs(extracted_text_dir, exist_ok=True)
 
-            if self.master.master and hasattr(self.master.master, 'update_audio_output_dir'):
-                self.master.master.update_audio_output_dir(book_name)
+            # Update the audiobook output folder in the parent app
+            if hasattr(self.master.master, 'audio_frame'):  # Ensure parent has the audio_frame attribute
+                self.master.master.audio_frame.update_audio_output_dir(book_name)
+
+
+    def _browse_pdf_folder(self):
+        # Initialize or reuse the existing QApplication instance
+        qt_app = QApplication.instance() or QApplication(sys.argv)
+
+        # Open QFileDialog to select a folder
+        folder = QFileDialog.getExistingDirectory(
+            None,
+            "Select Folder Containing PDFs",
+            self.project_dir
+        )
+        if folder:  # If a folder was selected
+            self.pdf_folder.set(folder)
+
+            # Get the last part of the folder name
+            folder_name = os.path.basename(folder.rstrip(os.sep))
+
+            # Set extracted_text_dir as the base output folder for batch mode
+            extracted_text_dir = os.path.join(self.project_dir, "extracted_pdf", folder_name)
+            self.extracted_text_dir.set(extracted_text_dir)
+
+            # Update the audiobook output folder in the parent app
+            if hasattr(self.master.master, 'audio_frame'):  # Ensure parent has the audio_frame attribute
+                self.master.master.audio_frame.update_audio_output_dir(folder_name)
+
+
+    def _browse_extracted_folder(self):
+        # Initialize or reuse the existing QApplication instance
+        qt_app = QApplication.instance() or QApplication(sys.argv)
+
+        # Open QFileDialog to select a folder
+        folder = QFileDialog.getExistingDirectory(
+            None,
+            "Select Existing Text Folder",
+            self.project_dir
+        )
+        if folder:  # If a folder was selected
+            self.manual_extracted_dir.set(folder)
+
+            # Update the audiobook output folder in the parent app
+            if hasattr(self.master.master, 'audio_frame'):  # Ensure parent has the audio_frame attribute
+                book_name = os.path.basename(folder.rstrip(os.sep))  # Get the last folder name
+                self.master.master.audio_frame.update_audio_output_dir(book_name)
+
 
     # Methods to get user selections
+    def get_source_option(self):
+        return self.source_option.get()
+
     def get_pdf_path(self):
         return self.pdf_path.get()
+
+    def get_pdf_folder(self):
+        return self.pdf_folder.get()
+
+    def get_manual_extracted_dir(self):
+        return self.manual_extracted_dir.get()
 
     def get_extracted_text_dir(self):
         return self.extracted_text_dir.get()
@@ -121,7 +264,6 @@ class SourceFrame(tb.Frame):
 
     def get_extract_mode(self):
         return self.extract_mode.get()
-
 
 class AudioFrame(tb.Frame):
     """
@@ -387,67 +529,139 @@ class ProgressFrame(tb.Frame):
         self.cancellation_flag = False  # Reset cancellation flag
 
         try:
-            # 1) Extract text
-            pdf_path = self.app.source_frame.get_pdf_path()
+            source_option = self.app.source_frame.get_source_option()
             use_toc = self.app.source_frame.get_use_toc()
             extract_mode = self.app.source_frame.get_extract_mode()
-
-            def extraction_progress_callback(progress):
-                if self.cancellation_flag:
-                    raise Exception("Process canceled by user.")
-                self.update_extract_progress(progress)
-            
-            output_dir = extract_book(
-                pdf_path, use_toc=use_toc, extract_mode=extract_mode, progress_callback=extraction_progress_callback
-            )
-
-            self.log_message(f"Text extraction completed. Files saved to: {output_dir}")
-            self.update_extract_progress(100)
-
-            # 2) Generate audiobook with Kokoro
-            self.set_status("Generating audiobook...")
-            self.update_audio_progress(10)
+            source_folder = self.app.source_frame.get_pdf_folder()  # Batch source folder
+            extracted_root = self.app.source_frame.get_extracted_text_dir()  # Base for extracted output
+            manual_extracted_dir = self.app.source_frame.get_manual_extracted_dir()
 
             model_path = self.app.audio_frame.get_model_path()
             voicepack_path = self.app.audio_frame.get_voicepack_path()
             chunk_size = self.app.audio_frame.get_chunk_size()
             audio_format = self.app.audio_frame.get_audio_format()
-            audio_output_dir = self.app.audio_frame.get_audio_output_dir()
+            audio_root = self.app.audio_frame.get_audio_output_dir()
             device = self.app.audio_frame.get_device()
 
-            def generation_progress_callback(progress):
+            all_extracted_folders = []
+
+            if source_option == "skip":
+                # Skip extraction, recursively process the folder structure
+                if not os.path.isdir(manual_extracted_dir):
+                    raise Exception("Manual extracted folder is invalid or doesn't exist.")
+
+                # Recursively find all text files and keep the folder structure
+                for root, _, files in os.walk(manual_extracted_dir):
+                    if any(file.lower().endswith(".txt") for file in files):  # Process folders with .txt files
+                        rel_path = os.path.relpath(root, manual_extracted_dir)
+                        output_subfolder = os.path.join(audio_root, rel_path)
+                        os.makedirs(output_subfolder, exist_ok=True)
+                        all_extracted_folders.append((root, output_subfolder))
+
+                self.update_extract_progress(100)
+
+            elif source_option == "batch":
+                if not os.path.isdir(source_folder):
+                    raise Exception("Batch source folder is invalid or doesn't exist.")
+
+                # Recursively find all PDFs and process them
+                pdf_files = []
+                for root, _, files in os.walk(source_folder):
+                    for file in files:
+                        if file.lower().endswith(".pdf"):
+                            pdf_files.append(os.path.join(root, file))
+
+                if not pdf_files:
+                    raise Exception("No PDF files found in the selected folder.")
+
+                total_pdfs = len(pdf_files)
+                for i, pdf_path in enumerate(pdf_files, start=1):
+                    if self.cancellation_flag:
+                        raise Exception("Process canceled by user during batch extraction.")
+
+                    # Calculate relative path and replicate folder structure
+                    rel_path = os.path.relpath(pdf_path, source_folder)
+                    folder_part = os.path.dirname(rel_path)
+                    pdf_filename = os.path.splitext(os.path.basename(pdf_path))[0]
+                    extracted_text_base = os.path.join(extracted_root, folder_part)
+                    os.makedirs(extracted_text_base, exist_ok=True)
+
+                    def extraction_progress_callback(progress):
+                        self.update_extract_progress(int((i - 1 + progress / 100) / total_pdfs * 100))
+                        if self.cancellation_flag:
+                            raise Exception("Process canceled by user.")
+
+                    # Extract PDF to its designated folder
+                    extract_book(
+                        pdf_path, use_toc=use_toc, extract_mode=extract_mode,
+                        output_base_dir=extracted_text_base, progress_callback=extraction_progress_callback
+                    )
+                    self.log_message(f"Extracted: {pdf_path}, saved to {extracted_text_base}")
+                    all_extracted_folders.append((extracted_text_base, os.path.join(audio_root, folder_part)))
+
+                self.update_extract_progress(100)
+
+            else:
+                # Single PDF
+                pdf_path = self.app.source_frame.get_pdf_path()
+                if not os.path.isfile(pdf_path):
+                    raise Exception("Single PDF path is invalid or doesn't exist.")
+                book_name = os.path.splitext(os.path.basename(pdf_path))[0]
+
+                def extraction_progress_callback(progress):
+                    self.update_extract_progress(progress)
+                    if self.cancellation_flag:
+                        raise Exception("Process canceled by user.")
+
+                extract_book(
+                    pdf_path,
+                    use_toc=use_toc,
+                    extract_mode=extract_mode,
+                    output_base_dir=extracted_root,  # e.g. "extracted_pdf"
+                    progress_callback=extraction_progress_callback
+                )
+
+                self.update_extract_progress(100)
+                all_extracted_folders.append((extracted_root, os.path.join(audio_root, book_name)))
+                self.log_message(f"Extracted: {book_name}, saved to {extracted_root}")
+
+            # Audiobook generation
+            self.set_status("Generating audiobook...")
+            self.update_audio_progress(10)
+
+            total_folders = len(all_extracted_folders)
+            for i, (input_folder, output_folder) in enumerate(all_extracted_folders, start=1):
                 if self.cancellation_flag:
-                    raise Exception("Process canceled by user.")
-                self.update_audio_progress(progress)
-                self.percentage_text.set(f"{progress}% complete")
+                    raise Exception("Process canceled by user during TTS generation.")
 
-            def time_estimate_callback(seconds_left):
-                # Ensure thread-safe call to UI
-                self.after(0, self.set_estimated_time, seconds_left)
-                        
-            generate_audiobooks_kokoro(
-                input_dir=output_dir,
-                model_path=model_path,
-                voicepack_path=voicepack_path,
-                audio_format=audio_format,
-                output_dir=audio_output_dir,
-                progress_callback=generation_progress_callback,
-                device=device,
-                cancellation_flag=lambda: self.cancellation_flag,  # pass a lambda
-                update_estimate_callback=time_estimate_callback,
-                pause_event=self.pause_event
-            )
+                os.makedirs(output_folder, exist_ok=True)
 
-            self.log_message(f"Audiobook generation completed. Files saved to: {audio_output_dir}")
-            self.update_audio_progress(100)
+                generate_audiobooks_kokoro(
+                    input_dir=input_folder,
+                    model_path=model_path,
+                    voicepack_path=voicepack_path,
+                    audio_format=audio_format,
+                    output_dir=output_folder,
+                    max_tokens=chunk_size,
+                    device=device,
+                    cancellation_flag=lambda: self.cancellation_flag,
+                    progress_callback=lambda progress: self.update_audio_progress(int((i - 1 + progress / 100) / total_folders * 100)),
+                )
+
+                self.log_message(f"Audiobook generation completed for: {input_folder}. Output: {output_folder}")
+                self.update_audio_progress(int(i / total_folders * 100))
+
             self.set_status("Process completed successfully.")
+            self.update_audio_progress(100)
+
         except Exception as e:
             self.log_message(f"Error occurred: {e}")
             self.set_status("Process failed.")
         finally:
             self.running = False
-            self.cancel_button.config(state=DISABLED)
-            self.start_button.config(state=NORMAL)
+            self.cancel_button.config(state=tk.DISABLED)
+            self.start_button.config(state=tk.NORMAL)
+
 
     def _pause_process(self):
         self.pause_event.clear()  # Pause the process

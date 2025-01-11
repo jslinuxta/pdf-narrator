@@ -106,7 +106,7 @@ def generate_audiobooks_kokoro(
     print(f"Loading voicepack from: {voicepack_path}")
     VOICEPACK = torch.load(voicepack_path, weights_only=True).to(device)
 
-    # 5. (Optional) measure total text length for time estimates
+    # 5. Measure total text length for time estimates
     total_text_length = 0
     for f in files:
         with open(os.path.join(input_dir, f), 'r', encoding='utf-8') as tempf:
@@ -114,23 +114,38 @@ def generate_audiobooks_kokoro(
 
     total_characters_processed = 0
     total_time_spent = 0.0
+    recent_times = []  # Sliding window for recent chunk times
 
     # 6. Define an internal chunk callback for Kokoro
     def kokoro_chunk_done_callback(chars_in_chunk, chunk_duration):
         """
         Called by Kokoro for each chunk; used to track time & update estimates.
         """
-        nonlocal total_characters_processed, total_time_spent
+        nonlocal total_characters_processed, total_time_spent, recent_times
 
+        # Update total stats
         total_characters_processed += chars_in_chunk
         total_time_spent += chunk_duration
 
-        if update_estimate_callback and total_characters_processed > 0:
-            avg_time_per_char = total_time_spent / total_characters_processed
-            chars_left = total_text_length - total_characters_processed
-            remaining_time = avg_time_per_char * chars_left
-            update_estimate_callback(remaining_time)
+        # Track recent chunk durations
+        time_per_char = chunk_duration / chars_in_chunk if chars_in_chunk > 0 else 0
+        recent_times.append(time_per_char)
+        if len(recent_times) > 5:  # Keep the last 5 times
+            recent_times.pop(0)
 
+        # Calculate weighted average
+        recent_avg = sum(recent_times) / len(recent_times) if recent_times else 0
+        overall_avg = total_time_spent / total_characters_processed if total_characters_processed else 0
+        weighted_avg = 0.7 * recent_avg + 0.3 * overall_avg
+
+        # Estimate remaining time
+        chars_left = total_text_length - total_characters_processed
+        remaining_time = weighted_avg * chars_left
+
+        if update_estimate_callback:
+            update_estimate_callback(max(remaining_time, 0))  # Ensure no negative time
+
+    # 7. Process each file
     generated_files = []
     for i, text_file in enumerate(files, start=1):
         # Check for cancellation
@@ -138,7 +153,7 @@ def generate_audiobooks_kokoro(
             print("Process canceled before file:", text_file)
             break
 
-        # Basic progress (file level)
+        # File-level progress
         progress_percent = int((i / total_files) * 100)
         if progress_callback:
             progress_callback(progress_percent)
@@ -146,8 +161,8 @@ def generate_audiobooks_kokoro(
         input_path = os.path.join(input_dir, text_file)
         base_name = os.path.splitext(text_file)[0]
         output_path = os.path.join(output_dir, f"{base_name}{audio_format}")
-
         print(f"\n=== Generating audio for: {input_path} ===")
+        print(f"Output file: {output_path}")
         generate_audio_for_file_kokoro(
             input_path=input_path,
             model=MODEL,
@@ -155,7 +170,7 @@ def generate_audiobooks_kokoro(
             output_path=output_path,
             device=device,
             cancellation_flag=cancellation_flag,
-            progress_callback=kokoro_chunk_done_callback,  # pass chunk callback to Kokoro
+            progress_callback=kokoro_chunk_done_callback,  # Pass chunk callback to Kokoro
             pause_event=pause_event,
             max_tokens=max_tokens
         )
