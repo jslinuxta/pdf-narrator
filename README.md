@@ -1,6 +1,11 @@
 # PDF Narrator (Kokoro Edition)
 
-Transform your PDF documents into audiobooks effortlessly using **advanced text extraction** and **Kokoro TTS** technology. This fork/variation of Kokoro allows for **longer file generation** and better handling of extracted PDF text.
+**Updated for Kokoro v1.0!**  
+Now setting up is easier—simply install the required Python dependencies (including the updated Kokoro package) and run the app. No more manual downloads or moving model files into specific folders.
+
+PDF Narrator (Kokoro Edition) transforms your PDF documents into audiobooks effortlessly using **advanced text extraction** and **Kokoro TTS** technology. With Kokoro v1.0, the integration is seamless and the setup is as simple as installing the requirements and running the application.
+
+---
 
 ## Demo
 
@@ -10,7 +15,9 @@ Transform your PDF documents into audiobooks effortlessly using **advanced text 
 
 2. **Audio Sample**  
    Listen to a short sample of the generated audiobook:  
-   https://github.com/user-attachments/assets/02953345-aceb-41f3-babf-1d1606c76641
+   [Audio Sample](https://github.com/user-attachments/assets/02953345-aceb-41f3-babf-1d1606c76641)
+
+---
 
 ## Features
 
@@ -21,12 +28,12 @@ Transform your PDF documents into audiobooks effortlessly using **advanced text 
 
 - **Kokoro TTS Integration**
 
-  - Generate natural-sounding audiobooks with the [Kokoro-82M model](https://huggingface.co/hexgrad/Kokoro-82M).
+  - Generate natural-sounding audiobooks with the updated [Kokoro v1.0 model](https://huggingface.co/hexgrad/Kokoro-82M).
   - Easily select or swap out different `.pt` voicepacks.
 
 - **User-Friendly GUI**
 
-  - Modern interface with **ttkbootstrap** (theme selector, scrolled logs, progress bars).
+  - Modern interface built with **ttkbootstrap** (theme selector, scrolled logs, progress bars).
   - Pause/resume and cancel your audiobook generation anytime.
 
 - **Configurable for Low-VRAM Systems**
@@ -38,9 +45,9 @@ Transform your PDF documents into audiobooks effortlessly using **advanced text 
 ## Prerequisites
 
 - **Python 3.8+**
-- **FFmpeg** (for audio-related tasks on some systems).
-- **Torch** (PyTorch for the Kokoro TTS model).
-- **Other Dependencies** listed in `requirements.txt`.
+- **FFmpeg** (for audio-related tasks on some systems)
+- **Torch** (PyTorch for the Kokoro TTS model)
+- Other dependencies as listed in `requirements.txt`
 
 ---
 
@@ -70,24 +77,15 @@ Transform your PDF documents into audiobooks effortlessly using **advanced text 
    pip install -r requirements.txt
    ```
 
-4. **Download Kokoro Model**
+4. **Install Kokoro v1.0**
 
-   - Go to the [Kokoro-82M Hugging Face page](https://huggingface.co/hexgrad/Kokoro-82M).
-   - Download the model checkpoint:  
-     [kokoro-v0_19.pth?download=true](https://huggingface.co/hexgrad/Kokoro-82M/resolve/main/kokoro-v0_19.pth?download=true)
-   - Place this file in the `models/` directory (or a subdirectory) of your project.  
-     Example:
-     ```bash
-     mkdir -p models
-     mv /path/to/kokoro-v0_19.pth models/
-     ```
+   The updated Kokoro package is now available on PyPI. Simply install it:
 
-5. **Optional: Download Additional Voicepacks**
+   ```bash
+   pip install kokoro>=1.0.0
+   ```
 
-   - By default, `.pt` files (voicepacks) are in `Kokoro/voices/`.
-   - If you have custom voicepacks, place them in `voices/your_custom_file.pt`.
-
-6. **Install FFmpeg** (if you need transcoding/combining WAV files)
+5. **Install FFmpeg** (if required)
 
    - **Ubuntu/Debian**:
      ```bash
@@ -102,95 +100,67 @@ Transform your PDF documents into audiobooks effortlessly using **advanced text 
 
 ---
 
-## Windows Installation Notes
+## Windows Additional Installation Notes
 
-For Windows, certain libraries such as `DeepSpeed`, `lxml`, and `eSpeak NG` may require special steps for installation. Follow these guidelines to ensure a smooth setup.
+For Windows users, some libraries may require extra steps:
 
 ### 1. **Prerequisites**
 
 - **Python 3.12.7**  
-  Download and install [Python 3.12.7](https://www.python.org/downloads/).  
-  Ensure `python` and `pip` are added to your system's PATH during installation.
+  Download and install [Python 3.12.7](https://www.python.org/downloads/). Ensure `python` and `pip` are added to your system's PATH.
 
 - **CUDA 12.4** (for GPU acceleration)  
-  Install the [CUDA 12.4 Toolkit](https://developer.nvidia.com/cuda-downloads) to ensure compatibility with precompiled DeepSpeed.
+  Install the [CUDA 12.4 Toolkit](https://developer.nvidia.com/cuda-downloads) if you plan to use GPU acceleration.
 
 ### 2. **Installing eSpeak NG**
 
-eSpeak NG is a lightweight and versatile text-to-speech engine required for phoneme-based operations.
+eSpeak NG is required for phoneme-based operations.
 
 1. **Download the Installer**  
-   [https://github.com/espeak-ng/espeak-ng/releases/download/1.51/espeak-ng-X64.msi](https://github.com/espeak-ng/espeak-ng/releases/download/1.51/espeak-ng-X64.msi)
+   [eSpeak NG X64 Installer](https://github.com/espeak-ng/espeak-ng/releases/download/1.51/espeak-ng-X64.msi)
 
-2. **Run the Installer**
-
-   - Double-click the `.msi` file to start the installation.
-   - Follow the on-screen instructions to complete the setup.
+2. **Run the Installer**  
+   Follow the on-screen instructions.
 
 3. **Set Environment Variables**  
-   Add the following environment variables for `phonemizer` compatibility:
+   Add the following environment variables:
 
-   - `PHONEMIZER_ESPEAK_LIBRARY`  
-     `C:\Program Files\eSpeak NG\libespeak-ng.dll`
+   - `PHONEMIZER_ESPEAK_LIBRARY` → `C:\Program Files\eSpeak NG\libespeak-ng.dll`
+   - `PHONEMIZER_ESPEAK_PATH` → `C:\Program Files (x86)\eSpeak\command_line\espeak.exe`
 
-   - `PHONEMIZER_ESPEAK_PATH`  
-     `C:\Program Files (x86)\eSpeak\command_line\espeak.exe`
-
-   **Steps to Add Environment Variables**:
-
-   - Right-click on "This PC" or "Computer" and select "Properties".
-   - Go to "Advanced system settings" > "Environment Variables".
-   - Under "System variables", click "New" and add the variables above with their respective values.
-   - Click "OK" to save the changes.
+   (Right-click "This PC" → Properties → Advanced system settings → Environment Variables)
 
 4. **Verify Installation**
-   - Open Command Prompt and check the version of `eSpeak NG`:
-     ```cmd
-     espeak-ng --version
-     ```
+
+   Open Command Prompt and run:
+
+   ```cmd
+   espeak-ng --version
+   ```
 
 ### 3. **Using Precompiled Wheels for DeepSpeed and lxml**
 
 1. **Download Wheels**
 
-   - **DeepSpeed** (Python 3.12.7, CUDA 12.4)  
-     [https://huggingface.co/NM156/deepspeed_wheel/tree/main](https://huggingface.co/NM156/deepspeed_wheel/tree/main)
+   - **DeepSpeed** (for Python 3.12.7, CUDA 12.4): [DeepSpeed Wheel](https://huggingface.co/NM156/deepspeed_wheel/tree/main)
+   - **lxml** (for Python 3.12): [lxml Release](https://github.com/lxml/lxml/releases/tag/lxml-5.3.0)
 
-   - **lxml** (Python 3.12)  
-     [https://github.com/lxml/lxml/releases/tag/lxml-5.3.0](https://github.com/lxml/lxml/releases/tag/lxml-5.3.0)
+2. **Install the Wheels**
 
-2. **Install the Wheels**  
-   Activate your virtual environment and install the downloaded wheels:
+   Activate your virtual environment and run:
 
    ```cmd
-   # Activate the virtual environment
-   venv\Scripts\activate
-
-   # Install DeepSpeed
    pip install path\to\deepspeed-0.11.2+cuda124-cp312-cp312-win_amd64.whl
-
-   # Install lxml
    pip install path\to\lxml-5.3.0-cp312-cp312-win_amd64.whl
    ```
 
-### 4. **Verify Installation**
+3. **Verify Installation**
 
-Once installed, verify the tools and libraries:
-
-```cmd
-# Check DeepSpeed version
-deepspeed --version
-
-# Check lxml installation
-pip show lxml
-
-# Check eSpeak NG version
-espeak-ng --version
-```
-
-### 5. **Optional: Compile Libraries Yourself**
-
-If you’re using a different Python or CUDA version, or if the precompiled wheels don’t match your environment, you may need to compile `DeepSpeed` and `lxml` yourself. Refer to the steps in the DeepSpeed documentation or each library’s GitHub for detailed build instructions.
+   ```cmd
+   deepspeed --version
+   pip show lxml
+   espeak-ng --version
+   ```
 
 ---
 
@@ -205,30 +175,28 @@ If you’re using a different Python or CUDA version, or if the precompiled whee
 2. **Select a Mode**
 
    - **Single PDF**: Choose a specific PDF file and extract its text.
-   - **Batch PDFs**: Select a folder with multiple PDFs. The app processes all PDFs in the folder (and subfolders).
-   - **Skip Extraction**: Use pre-extracted text files. The app retains the folder structure for audiobook generation.
+   - **Batch PDFs**: Select a folder with multiple PDFs (the app processes all PDFs, preserving folder structure).
+   - **Skip Extraction**: Use pre-extracted text files organized in folders.
 
 3. **Extract Text (for Single/Batch Modes)**
 
-   - If TOC is available, extract by chapters. Otherwise, extract the entire book.
-   - For batch processing, the app maintains the relative folder structure for all PDFs.
+   - The app will split the text into chapters if a Table of Contents (TOC) is available; otherwise, it extracts the entire document.
 
 4. **Configure Kokoro TTS Settings**
 
-   - Select the `.pth` model (e.g., `models/kokoro-v0_19.pth`).
-   - Pick a `.pt` voicepack (e.g., `voices/af_sarah.pt`).
-   - Adjust chunk size if you have limited VRAM.
-   - Choose output audio format (`.wav` or `.mp3`).
+   - Select your Kokoro model (the updated package handles this automatically).
+   - Choose a `.pt` voicepack (e.g., `voices/af_sarah.pt`). The app automatically derives the language code from the first letter of the voice name.
+   - Adjust the chunk size for your system’s VRAM.
+   - Choose your desired output format (`.wav` or `.mp3`).
 
 5. **Generate Audiobook**
 
    - Click **Start Process**.
-   - Track progress via logs, estimated time, and progress bars.
-   - Pause/Resume or Cancel at any point.
+   - Monitor progress via logs, progress bars, and estimated time.
+   - Pause/Resume or Cancel the process as needed.
 
 6. **Enjoy Your Audiobook**
-
-   - Open the output folder to find your generated `.wav` or `.mp3` files.
+   - Open the output folder to find your generated audio files.
 
 ---
 
@@ -236,60 +204,26 @@ If you’re using a different Python or CUDA version, or if the precompiled whee
 
 ### PDF Extraction
 
-- Built atop [PyMuPDF](https://pymupdf.readthedocs.io/) for parsing text.
-- Cleans up headers, footers, page numbers, and multi-hyphen lines.
-- _Chapters vs. Whole:_
-  - If TOC is found, you can split into smaller .txt files.
-  - Otherwise, extract the entire text into one file.
-
-#### **Three Modes for PDF/Text Processing**
-
-1. **Single PDF**
-
-   - Extract text from one PDF file.
-   - Output directory: `extracted_pdf/<book_name>`.
-
-2. **Batch PDFs**
-
-   - Recursively process all PDFs in a selected folder.
-   - Maintains folder structure under `extracted_pdf/`.
-
-3. **Skip Extraction**
-   - Use pre-extracted text files organized in folders.
-   - Input folder structure is mirrored for audiobook output.
+- Built on [PyMuPDF](https://pymupdf.readthedocs.io/) for efficient text parsing.
+- Cleans headers, footers, page numbers, and unwanted elements.
+- Splits text based on chapters (if TOC is available) or extracts the entire document.
 
 ### Kokoro TTS
 
-- **Text Normalization & Phonemization**  
-  Built-in text normalization for years, times, currency, etc.
-
-- **Token-Based Splitting**  
-  Splits text into < 510 tokens per chunk to accommodate model constraints.  
-  Joins all chunked audio into a single final file.
-
-- **Voicepacks (.pt)**  
-  Each voicepack provides a reference embedding for a given voice.
+- **Text Normalization & Phonemization**
+  - Advanced handling of dates, times, currency, etc.
+- **Token-Based Splitting**
+  - Splits text into chunks (<510 tokens) to meet model constraints and joins chunked audio into the final output.
+- **Voicepacks (.pt)**
+  - Each voicepack provides a reference embedding for a given voice.
+  - The app derives the language code from the first letter of the voice identifier (e.g., `"af_sarah"` → `a`).
 
 ### Low-VRAM/Speed Tips
 
-- **Chunk Size**  
-  If you run out of GPU memory, lower your chunk size from the default (2500) to something smaller (e.g., 1000 or 500).
-
-- **Device Selection**  
-  Choose `CUDA` if you have a compatible GPU, or `CPU` for CPU-only systems.
-
----
-
-## Limitations
-
-1. **PDF Layout**  
-   Extraction can vary if the PDF has complex formatting or unusual text flow.
-
-2. **TTS Quality**  
-   The generated speech depends on the **Kokoro** model’s training and quality.
-
-3. **Processing Time**  
-   Long PDFs with complex text can take a while to extract and convert.
+- **Chunk Size**
+  - Adjust according to your GPU’s memory.
+- **Device Selection**
+  - Switch to CPU mode if a compatible GPU is unavailable.
 
 ---
 
@@ -297,8 +231,8 @@ If you’re using a different Python or CUDA version, or if the precompiled whee
 
 We welcome contributions!
 
-- Fork, branch, and submit a pull request.
-- Report bugs via [Issues](https://github.com/mateogon/pdf-narrator/issues).
+- Fork the repository, create a new branch, and submit a pull request.
+- Report bugs or suggest features via [Issues](https://github.com/mateogon/pdf-narrator/issues).
 
 ---
 
@@ -306,4 +240,6 @@ We welcome contributions!
 
 This project is released under the [MIT License](LICENSE.md).
 
-Enjoy converting your PDFs into immersive audiobooks powered by **Kokoro** TTS!
+---
+
+Enjoy converting your PDFs into immersive audiobooks powered by **Kokoro v1.0 TTS**!

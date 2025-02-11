@@ -2,35 +2,24 @@ import os
 import time
 import numpy as np
 import torch
-from scipy.io.wavfile import write
-
-# Kokoro imports
-from Kokoro.models import build_model
-from Kokoro.kokoro import generate
-
+import soundfile as sf  # new: using soundfile instead of scipy.io.wavfile.write
+from kokoro import KPipeline
 
 def generate_audio_for_file_kokoro(
     input_path,
-    model,
-    voicepack,
+    pipeline,         # a KPipeline instance (initialized with the proper lang_code)
+    voice,            # e.g. "af_heart"
     output_path,
-    device="cuda",
+    speed=1,
+    split_pattern=r'\n+',
     cancellation_flag=None,
     progress_callback=None,
-    pause_event=None,
-    max_tokens=510
+    pause_event=None
 ):
-    """
-    Read a single .txt file, pass its entire text to Kokoro's `generate`,
-    and then write out a single combined audio file.
-    No extra chunking is done here; chunking happens inside Kokoro.
-    """
-
-    # 1. Read the file text
+    # 1. Read the text file
     with open(input_path, 'r', encoding='utf-8') as f:
         text = f.read()
 
-    # 2. (Optional) check for cancellation or pause
     if cancellation_flag and cancellation_flag():
         print("Process canceled before generating audio.")
         return
@@ -38,143 +27,124 @@ def generate_audio_for_file_kokoro(
     if pause_event and not pause_event.is_set():
         pause_event.wait()
 
-    # 3. Generate audio via Kokoro
-    #    We pass `progress_callback` so Kokoro can report chunk-by-chunk progress.
-    audio_chunks, phoneme_chunks = generate(
-        model=model,
-        text=text,
-        voicepack=voicepack,
-        lang='a',         # Adjust if your voice name implies a different language code
-        speed=1,
-        max_tokens=max_tokens,
-        progress_callback=progress_callback,
-        cancellation_flag = cancellation_flag
-    )
+    audio_chunks = []
+    # 2. Generate audio chunks using the new KPipeline call
+    #    (each iteration yields: graphemes, phonemes, audio)
+    #    Optionally, you can time each chunk to update progress.
+    start_chunk = time.time()
+    for chunk_index, (gs, ps, audio) in enumerate(pipeline(text, voice=voice, speed=speed, split_pattern=split_pattern)):
+        if cancellation_flag and cancellation_flag():
+            print("Process canceled during audio generation.")
+            break
+        if pause_event and not pause_event.is_set():
+            pause_event.wait()
 
-    # 4. Combine all chunks into one NumPy array
+        # (Optional) measure chunk time for progress estimation
+        chunk_duration = time.time() - start_chunk
+        start_chunk = time.time()
+        chars_in_chunk = len(gs)
+        if progress_callback:
+            progress_callback(chars_in_chunk, chunk_duration)
+        # Convert to numpy if needed
+        if isinstance(audio, torch.Tensor):
+            audio = audio.cpu().numpy()
+        audio_chunks.append(audio)
+
     if not audio_chunks:
         print(f"No audio was generated for file: {input_path}")
         return
 
+    # 3. Concatenate and normalize to int16 (sample rate is assumed 24000)
     combined_audio = np.concatenate(audio_chunks)
-
-    # 5. Normalize to int16 for WAV
-    normalized_audio = (combined_audio / np.max(np.abs(combined_audio)) * 32767).astype('int16')
-
-    # 6. Save as 24 kHz WAV (adjust if your model uses a different sample rate)
-    write(output_path, 24000, normalized_audio)
+    normalized_audio = (combined_audio / np.max(np.abs(combined_audio)) * 32767).astype(np.int16)
+    sf.write(output_path, normalized_audio, 24000)
     print(f"Audio saved to {output_path}")
 
 
 def generate_audiobooks_kokoro(
     input_dir,
-    model_path,
-    voicepack_path,
+    lang_code,        # language code for the pipeline (e.g. 'a' for American English)
+    voice,            # voice to use (e.g. "af_heart")
     output_dir=None,
     audio_format=".wav",
-    progress_callback=None,
-    device="cuda",
+    speed=1,
+    split_pattern=r'\n+',
+    progress_callback=None,         # receives progress updates (e.g. percentage)
     cancellation_flag=None,
-    update_estimate_callback=None,
-    pause_event=None,
-    max_tokens=510
+    update_estimate_callback=None,    # receives time-estimate updates (optional)
+    pause_event=None
 ):
-    """
-    Generate audiobooks from .txt files inside `input_dir`, using Kokoro TTS.
-    """
-
-    # 1. Validate input
     if not os.path.isdir(input_dir):
         raise FileNotFoundError(f"Input directory '{input_dir}' does not exist.")
 
-    # 2. Determine output directory
+    # Determine output directory if not provided
     if output_dir is None:
         book_name = os.path.basename(os.path.normpath(input_dir))
         output_dir = os.path.join(os.path.dirname(input_dir), f"{book_name}_audio")
     os.makedirs(output_dir, exist_ok=True)
 
-    # 3. Get .txt files
-    files = [f for f in os.listdir(input_dir) if f.lower().endswith('.txt')]
-    files.sort()
+    # Gather .txt files and sort them
+    files = sorted(f for f in os.listdir(input_dir) if f.lower().endswith('.txt'))
     total_files = len(files)
 
-    # 4. Load Kokoro model + voicepack
-    device = device if (torch.cuda.is_available() and device == "cuda") else "cpu"
-    print(f"Loading model from: {model_path} (device={device})")
-    MODEL = build_model(model_path, device)
+    # Initialize a KPipeline for the target language
+    pipeline = KPipeline(lang_code=lang_code)
 
-    print(f"Loading voicepack from: {voicepack_path}")
-    VOICEPACK = torch.load(voicepack_path, weights_only=True).to(device)
-
-    # 5. Measure total text length for time estimates
+    # (Optional) Pre-calculate total text length for timing estimates
     total_text_length = 0
     for f in files:
         with open(os.path.join(input_dir, f), 'r', encoding='utf-8') as tempf:
             total_text_length += len(tempf.read())
-
     total_characters_processed = 0
     total_time_spent = 0.0
-    recent_times = []  # Sliding window for recent chunk times
+    recent_times = []
 
-    # 6. Define an internal chunk callback for Kokoro
-    def kokoro_chunk_done_callback(chars_in_chunk, chunk_duration):
-        """
-        Called by Kokoro for each chunk; used to track time & update estimates.
-        """
+    def chunk_progress_callback(chars_in_chunk, chunk_duration):
         nonlocal total_characters_processed, total_time_spent, recent_times
-
-        # Update total stats
         total_characters_processed += chars_in_chunk
         total_time_spent += chunk_duration
-
-        # Track recent chunk durations
         time_per_char = chunk_duration / chars_in_chunk if chars_in_chunk > 0 else 0
         recent_times.append(time_per_char)
-        if len(recent_times) > 5:  # Keep the last 5 times
+        if len(recent_times) > 5:
             recent_times.pop(0)
-
-        # Calculate weighted average
         recent_avg = sum(recent_times) / len(recent_times) if recent_times else 0
         overall_avg = total_time_spent / total_characters_processed if total_characters_processed else 0
         weighted_avg = 0.7 * recent_avg + 0.3 * overall_avg
-
-        # Estimate remaining time
         chars_left = total_text_length - total_characters_processed
         remaining_time = weighted_avg * chars_left
-
         if update_estimate_callback:
-            update_estimate_callback(max(remaining_time, 0))  # Ensure no negative time
+            update_estimate_callback(max(remaining_time, 0))
 
-    # 7. Process each file
+    print("=== Starting audiobook generation ===")
     generated_files = []
     for i, text_file in enumerate(files, start=1):
-        # Check for cancellation
         if cancellation_flag and cancellation_flag():
             print("Process canceled before file:", text_file)
             break
 
-        # File-level progress
-        progress_percent = int((i / total_files) * 100)
+        print(f"\n=== Processing file {i}/{total_files}: {text_file} ===")
         if progress_callback:
-            progress_callback(progress_percent)
-
+            progress_callback(int((i / total_files) * 100))
         input_path = os.path.join(input_dir, text_file)
         base_name = os.path.splitext(text_file)[0]
         output_path = os.path.join(output_dir, f"{base_name}{audio_format}")
-        print(f"\n=== Generating audio for: {input_path} ===")
+        print(f"Generating audio for: {input_path}")
         print(f"Output file: {output_path}")
+
+        start_time = time.time()
         generate_audio_for_file_kokoro(
             input_path=input_path,
-            model=MODEL,
-            voicepack=VOICEPACK,
+            pipeline=pipeline,
+            voice=voice,
             output_path=output_path,
-            device=device,
+            speed=speed,
+            split_pattern=split_pattern,
             cancellation_flag=cancellation_flag,
-            progress_callback=kokoro_chunk_done_callback,  # Pass chunk callback to Kokoro
-            pause_event=pause_event,
-            max_tokens=max_tokens
+            progress_callback=chunk_progress_callback,
+            pause_event=pause_event
         )
-
+        elapsed = time.time() - start_time
+        print(f"Processed {text_file} in {elapsed:.2f} seconds.")
         generated_files.append(output_path)
 
     return generated_files

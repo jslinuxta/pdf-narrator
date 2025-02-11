@@ -278,7 +278,7 @@ class AudioFrame(tb.Frame):
         # Default Kokoro model checkpoint
         self.model_path = tk.StringVar(value="models/kokoro-v0_19.pth")
         # Default voicepack (adjust if you like a different default)
-        self.voicepack_path = tk.StringVar(value="Kokoro/voices/af_sarah.pt")
+        self.voicepack_path = tk.StringVar(value="voices/af_sarah.pt")
 
         self.chunk_size = tk.IntVar(value=510)    # Default chunk size
         self.audio_format = tk.StringVar(value=".wav")  # Default audio format
@@ -379,7 +379,7 @@ class AudioFrame(tb.Frame):
         Scan the 'voices' directory for .pt voicepacks (Kokoro).
         Returns a list of relative paths to the found voicepacks.
         """
-        voices_dir = os.path.join(self.project_dir, "Kokoro/voices/")
+        voices_dir = os.path.join(self.project_dir, "voices/")
         voice_files = []
 
         for root, dirs, files in os.walk(voices_dir):
@@ -537,7 +537,10 @@ class ProgressFrame(tb.Frame):
             manual_extracted_dir = self.app.source_frame.get_manual_extracted_dir()
 
             model_path = self.app.audio_frame.get_model_path()
+            # Extract the voice identifier from the selected voicepack path.
             voicepack_path = self.app.audio_frame.get_voicepack_path()
+            # For example, "Kokoro/voices/af_sarah.pt" becomes "af_sarah"
+            voice = os.path.splitext(os.path.basename(voicepack_path))[0]
             chunk_size = self.app.audio_frame.get_chunk_size()
             audio_format = self.app.audio_frame.get_audio_format()
             audio_root = self.app.audio_frame.get_audio_output_dir()
@@ -636,17 +639,25 @@ class ProgressFrame(tb.Frame):
 
                 os.makedirs(output_folder, exist_ok=True)
 
+                
+
                 generate_audiobooks_kokoro(
                     input_dir=input_folder,
-                    model_path=model_path,
-                    voicepack_path=voicepack_path,
-                    audio_format=audio_format,
+                    lang_code=voice[0],           # default language code (adjust if needed)
+                    voice=voice,             # use the UI-selected voice
                     output_dir=output_folder,
-                    max_tokens=chunk_size,
-                    device=device,
+                    audio_format=audio_format,
+                    speed=1,
+                    split_pattern=r'\n+',
+                    progress_callback=lambda progress: self.update_audio_progress(
+                        int((i - 1 + progress / 100) / total_folders * 100)
+                    ),
                     cancellation_flag=lambda: self.cancellation_flag,
-                    progress_callback=lambda progress: self.update_audio_progress(int((i - 1 + progress / 100) / total_folders * 100)),
+                    update_estimate_callback=self.set_estimated_time,
+                    pause_event=self.pause_event
                 )
+
+
 
                 self.log_message(f"Audiobook generation completed for: {input_folder}. Output: {output_folder}")
                 self.update_audio_progress(int(i / total_folders * 100))
