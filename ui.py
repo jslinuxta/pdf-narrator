@@ -278,7 +278,7 @@ class AudioFrame(tb.Frame):
         # Default Kokoro model checkpoint
         self.model_path = tk.StringVar(value="models/kokoro-v0_19.pth")
         # Default voicepack (adjust if you like a different default)
-        self.voicepack_path = tk.StringVar(value="voices/af_sarah.pt")
+        self.voicepack_path = tk.StringVar(value="voices/am_liam.pt")
 
         self.chunk_size = tk.IntVar(value=510)    # Default chunk size
         self.audio_format = tk.StringVar(value=".wav")  # Default audio format
@@ -864,7 +864,7 @@ class AudiobookApp(tb.Window):
 
                     # Load audio settings
                     self.audio_frame.model_path.set(config.get("model_path", "models/kokoro-v0_19.pth"))
-                    self.audio_frame.voicepack_path.set(config.get("voicepack_path", "Kokoro/voices/af_sarah.pt"))
+                    self.audio_frame.voicepack_path.set(config.get("voicepack_path", "Kokoro/voices/am_liam.pt"))
                     self.audio_frame.chunk_size.set(config.get("chunk_size", 510))
                     self.audio_frame.audio_format.set(config.get("audio_format", ".wav"))
 

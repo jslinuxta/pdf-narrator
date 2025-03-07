@@ -117,10 +117,12 @@ def extract_cleaned_text(doc, header_threshold=50, footer_threshold=50):
                 line = line.rstrip()
                 # Check for trailing "- " or "-"
                 if line.endswith('- '):
+                    print(f"Removed hyphen-space from line: {line}")
                     line = line[:-2]  # Remove "- " (hyphen and space)
                     
                 elif line.endswith('-'):
                     line = line[:-1]  # Remove just "-"
+                    print(f"Removed hyphen from line: {line}")
                 cleaned_lines.append(line)
             # Rejoin the lines into block text
             block_text = "\n".join(cleaned_lines)
@@ -236,7 +238,7 @@ def extract_book(pdf_path, use_toc=True, extract_mode="chapters", output_base_di
     if progress_callback:
         progress_callback(100)
     return output_dir
-'''
+
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         print("Usage: python extract.py <pdf_path>")
@@ -247,4 +249,3 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"Error during extraction: {e}")
         sys.exit(1)
-'''

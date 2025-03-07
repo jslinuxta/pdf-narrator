@@ -4,60 +4,79 @@ import os
 import sys
 
 def clean_text(text):
-    # Merge hyphenated line breaks (works with hyphens already removed)
-    
+    import regex as re
+
+    # Merge hyphenated line breaks
     text = re.sub(r'-\n\s*', '', text)
+
     # Normalize spaces around punctuation
     text = re.sub(r'\s*([.,;!?])\s*', r'\1 ', text)
+
     # Handle quoted content by placing it on its own line
     text = re.sub(r'“([^”]*)”', r'\n“\1”\n', text)  # For curly quotes
     text = re.sub(r'"([^"]*)"', r'\n"\1"\n', text)  # For straight quotes
+
     # Split text into lines for processing
     lines = text.splitlines()
     processed_lines = []
     buffer = ""
+
     for line in lines:
         line = line.strip()
         if not line:
             continue  # Skip empty lines
+
         if buffer:
             buffer += " " + line
         else:
             buffer = line
+
         # Check if the buffer ends with punctuation and is not part of a quote
         if re.search(r'[.!?]$', buffer) and not re.search(r'[“"”]$', buffer):
-            split_buffer = re.split(r'(?<=[.!?])\s+(?![”"])', buffer)
+            # If there is punctuation within the buffer, split it
+            split_buffer = re.split(r'(?<=[.!?])\s+(?![”"])', buffer)  # Avoid splitting inside quotes
             processed_lines.extend(split_buffer)
             buffer = ""
+
+    # Add any remaining text in the buffer
     if buffer:
         processed_lines.append(buffer)
-    # Collapse excessive blank lines and spaces
+
+    # Collapse excessive blank lines
     processed_lines = [line for line in processed_lines if line.strip()]
+    
+    # Collapse excessive spaces
     processed_text = "\n".join(processed_lines)
     processed_text = re.sub(r'[ \t]{2,}', ' ', processed_text)
-    # Add newlines after punctuation for TTS readability
+
+    # Add final newlines after punctuation for TTS readability
     processed_text = re.sub(r'(?<=[.!?])\s*(?!\n)', '\n', processed_text)
+
     # Remove excessive blank lines
     processed_text = re.sub(r'\n{3,}', '\n\n', processed_text)
-    processed_text = re.sub(r" vs\.", " versus", processed_text)
-    processed_text = re.sub(r" etc\.", " etcetera", processed_text)
-    
-    # Remove trademark symbols
-    processed_text = re.sub(r'™', '', processed_text)
+
     return processed_text.strip()
 
 def fix_text(text):
     """
     Joins lines that were split due to wrap-around.
+
+    Heuristic:
+    - If a line ends with a letter (or letter plus hyphen-like characters) and 
+      the next line (after stripping) starts with a lowercase letter, assume 
+      the word was cut and join the lines.
+    - Remove any trailing hyphen or soft hyphen (U+00AD) before joining.
     """
     lines = text.splitlines()
     fixed_lines = []
     i = 0
     while i < len(lines):
         current_line = lines[i]
+        # Continue joining if next line starts with lowercase letter
         while (i < len(lines) - 1 and 
                re.search(r'[\p{L}]$', current_line) and 
                re.match(r'^[a-z]', lines[i+1].lstrip())):
+            # Remove trailing hyphen(s) or soft hyphen(s)
             current_line += lines[i+1].lstrip()
             i += 1
         fixed_lines.append(current_line)
@@ -77,8 +96,6 @@ def additional_cleaning(text):
     text = text.replace(chr(8216), "'").replace(chr(8217), "'")
     text = text.replace('«', chr(8220)).replace('»', chr(8221))
     text = text.replace(chr(8220), '"').replace(chr(8221), '"')
-    text = re.sub(r'"', '', text)
-    text = re.sub(r'^\s*\.\s*$', '', text, flags=re.MULTILINE)
     text = text.replace('(', ',').replace(')', ',')
     text = text.replace(';', '.')
     text = text.replace('—', ' ,')
@@ -96,37 +113,27 @@ def extract_cleaned_text(doc, header_threshold=50, footer_threshold=50):
         filtered_lines = []
         for block in blocks:
             x0, y0, x1, y1, text, btype = block[:6]
+
             # Exclude headers/footers
             if y1 < header_threshold:
                 continue
             elif y0 > page_height - footer_threshold:
                 continue
+
             # Exclude page numbers
             if re.match(r'^\d+$', text.strip()):
                 continue
+
             # Exclude very small blocks
             block_width = x1 - x0
             block_height = y1 - y0
             if block_width < 0.1 * page_width and block_height < 0.1 * page_height:
                 continue
-            # Process each line in the block to remove trailing hyphens or hyphen-space
-            lines = text.splitlines()
-            cleaned_lines = []
-            for line in lines:
-                # Remove trailing whitespace first
-                line = line.rstrip()
-                # Check for trailing "- " or "-"
-                if line.endswith('- '):
-                    line = line[:-2]  # Remove "- " (hyphen and space)
-                    
-                elif line.endswith('-'):
-                    line = line[:-1]  # Remove just "-"
-                cleaned_lines.append(line)
-            # Rejoin the lines into block text
-            block_text = "\n".join(cleaned_lines)
-            filtered_lines.append(block_text)
+
+            filtered_lines.append(text)
 
         page_text = "\n".join(filtered_lines)
+
         all_pages.append(page_text)
     return all_pages
 
@@ -164,41 +171,51 @@ def structure_text_by_toc(toc, all_pages_text):
     last_chapter_text = None
     last_title = None
     last_level = None
+
     for i, entry in enumerate(toc):
         level, title, start_page = entry
         start_page_idx = start_page - 1
+
         if i < len(toc) - 1:
             _, _, next_page = toc[i + 1]
             end_page_idx = max(start_page_idx, next_page - 1)
         else:
             end_page_idx = len(all_pages_text) - 1
+
         chapter_pages = all_pages_text[start_page_idx:end_page_idx]
         chapter_text = "".join(chapter_pages)
-        # Apply cleaning after extraction
-        chapter_text = clean_text(chapter_text)
-        chapter_text = additional_cleaning(chapter_text)
+        # Using raw text (cleaning disabled):
+        # chapter_text = clean_text(chapter_text)
         clean_title = title.strip('\r\n')
+
         if last_chapter_text is not None:
             last_chapter_text = remove_overlap(last_chapter_text, chapter_text)
             chapters.append((last_level, last_title, last_chapter_text))
+
         last_chapter_text = chapter_text
         last_title = clean_title
         last_level = level
+
     if last_chapter_text is not None:
         chapters.append((last_level, last_title, last_chapter_text))
+
     return chapters
 
 def save_chapters(chapters, book_name, output_dir):
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
+
     padding = len(str(len(chapters)))
+
     for idx, (level, title, text) in enumerate(chapters, 1):
         safe_title = re.sub(r'[^a-zA-Z0-9_\- ]', '', title)
         safe_title = safe_title.strip().replace(' ', '_')
         if not safe_title:
             safe_title = f"chapter_{idx}"
+
         filename = f"{str(idx).zfill(padding)}_{safe_title}.txt"
         filepath = os.path.join(output_dir, filename)
+
         with open(filepath, 'w', encoding='utf-8') as f:
             f.write(text)
     print(f"Chapters saved in directory: {output_dir}")
@@ -206,45 +223,62 @@ def save_chapters(chapters, book_name, output_dir):
 def save_whole_book(book_name, all_pages_text, output_dir):
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
+
     output_file = os.path.join(output_dir, f"{book_name}_full_text.txt")
     full_text = "\n".join(all_pages_text)
-    full_text = clean_text(full_text)
-    full_text = additional_cleaning(full_text)
+    # Using raw text extraction (cleaning disabled):
+    # full_text = clean_text(full_text)
+
     with open(output_file, 'w', encoding='utf-8') as f:
         f.write(full_text)
     print(f"All content saved to: {output_file}")
 
 def extract_book(pdf_path, use_toc=True, extract_mode="chapters", output_base_dir="extracted_pdf", progress_callback=None):
+    """
+    Extract book text from a PDF.
+    :param pdf_path: Path to the input PDF file
+    :param use_toc: Whether to use TOC if available
+    :param extract_mode: "chapters" or "whole"
+    :param output_base_dir: Base directory for extraction results
+    :return: The output directory containing extracted text files.
+    """
     if progress_callback:
         progress_callback(10)
     if not os.path.isfile(pdf_path):
         raise FileNotFoundError(f"File '{pdf_path}' does not exist.")
+
     doc = fitz.open(pdf_path)
     all_pages_text = extract_cleaned_text(doc)
     toc = get_table_of_contents(doc)
-    deduplicated_toc = deduplicate_toc(toc)
+    deduplicated_t = deduplicate_toc(toc)
     book_name = os.path.splitext(os.path.basename(pdf_path))[0]
+
+    # Output directory structure: extracted_pdf/<book_name>/
     output_dir = output_base_dir
     os.makedirs(output_dir, exist_ok=True)
-    if use_toc and deduplicated_toc and extract_mode == "chapters":
-        chapters = structure_text_by_toc(deduplicated_toc, all_pages_text)
+
+    if use_toc and deduplicated_t and extract_mode == "chapters":
+        chapters = structure_text_by_toc(deduplicated_t, all_pages_text)
         save_chapters(chapters, book_name, output_dir)
     else:
+        print("Output dir is: ", output_dir)
         save_whole_book(book_name, all_pages_text, output_dir)
+
     doc.close()
     print("Extraction complete.")
     if progress_callback:
         progress_callback(100)
     return output_dir
-'''
-if __name__ == "__main__":
+
+# Main block for testing raw text extraction saved into chapters
+if __name__ == '__main__':
     if len(sys.argv) < 2:
         print("Usage: python extract.py <pdf_path>")
         sys.exit(1)
+
     pdf_path = sys.argv[1]
     try:
         extract_book(pdf_path, use_toc=True, extract_mode="chapters", output_base_dir="extracted_pdf")
     except Exception as e:
         print(f"Error during extraction: {e}")
         sys.exit(1)
-'''
