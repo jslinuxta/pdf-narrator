@@ -2,16 +2,34 @@ import fitz
 import regex as re
 import os
 import sys
+def ensure_lines_end_with_period(text):
+    """
+    Ensures each line ends with a period by merging lines until a period is reached.
+    """
+    lines = text.splitlines()
+    new_lines = []
+    buffer = ""
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue  # Skip empty lines
+        buffer = buffer + " " + line if buffer else line
+        if buffer.endswith('.'):
+            new_lines.append(buffer)
+            buffer = ""
+    if buffer:  # Append any remaining text
+        new_lines.append(buffer)
+    return '\n'.join(new_lines)
 
 def clean_text(text):
-    # Merge hyphenated line breaks (works with hyphens already removed)
-    
+    text = re.sub(r'\[\d+\]', '', text)
+    # Merge hyphenated line breaks
     text = re.sub(r'-\n\s*', '', text)
     # Normalize spaces around punctuation
     text = re.sub(r'\s*([.,;!?])\s*', r'\1 ', text)
     # Handle quoted content by placing it on its own line
-    text = re.sub(r'“([^”]*)”', r'\n“\1”\n', text)  # For curly quotes
-    text = re.sub(r'"([^"]*)"', r'\n"\1"\n', text)  # For straight quotes
+    text = re.sub(r'“([^”]*)”', r'\n“\1”\n', text)  # Curly quotes
+    text = re.sub(r'"([^"]*)"', r'\n"\1"\n', text)  # Straight quotes
     # Split text into lines for processing
     lines = text.splitlines()
     processed_lines = []
@@ -19,12 +37,12 @@ def clean_text(text):
     for line in lines:
         line = line.strip()
         if not line:
-            continue  # Skip empty lines
+            continue
         if buffer:
             buffer += " " + line
         else:
             buffer = line
-        # Check if the buffer ends with punctuation and is not part of a quote
+        # Split at sentence-ending punctuation, respecting quotes
         if re.search(r'[.!?]$', buffer) and not re.search(r'[“"”]$', buffer):
             split_buffer = re.split(r'(?<=[.!?])\s+(?![”"])', buffer)
             processed_lines.extend(split_buffer)
@@ -39,11 +57,13 @@ def clean_text(text):
     processed_text = re.sub(r'(?<=[.!?])\s*(?!\n)', '\n', processed_text)
     # Remove excessive blank lines
     processed_text = re.sub(r'\n{3,}', '\n\n', processed_text)
-    processed_text = re.sub(r" vs\.", " versus", processed_text)
-    processed_text = re.sub(r" etc\.", " etcetera", processed_text)
-    
+    # Additional replacements
+    processed_text = re.sub(r" vs\.", " versus ", processed_text)
+    processed_text = re.sub(r" etc\.", " etcetera ", processed_text)
     # Remove trademark symbols
     processed_text = re.sub(r'™', '', processed_text)
+    # Ensure every line ends with a period
+    processed_text = ensure_lines_end_with_period(processed_text)
     return processed_text.strip()
 
 def fix_text(text):
@@ -174,7 +194,7 @@ def structure_text_by_toc(toc, all_pages_text):
             end_page_idx = len(all_pages_text) - 1
         chapter_pages = all_pages_text[start_page_idx:end_page_idx]
         chapter_text = "".join(chapter_pages)
-        # Apply cleaning after extraction
+        # Apply cleaning
         chapter_text = clean_text(chapter_text)
         chapter_text = additional_cleaning(chapter_text)
         clean_title = title.strip('\r\n')
@@ -188,6 +208,16 @@ def structure_text_by_toc(toc, all_pages_text):
         chapters.append((last_level, last_title, last_chapter_text))
     return chapters
 
+def save_whole_book(book_name, all_pages_text, output_dir):
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+    output_file = os.path.join(output_dir, f"{book_name}_full_text.txt")
+    full_text = "\n".join(all_pages_text)
+    full_text = clean_text(full_text)
+    full_text = additional_cleaning(full_text)
+    with open(output_file, 'w', encoding='utf-8') as f:
+        f.write(full_text)
+    print(f"All content saved to: {output_file}")
 def save_chapters(chapters, book_name, output_dir):
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
@@ -203,16 +233,6 @@ def save_chapters(chapters, book_name, output_dir):
             f.write(text)
     print(f"Chapters saved in directory: {output_dir}")
 
-def save_whole_book(book_name, all_pages_text, output_dir):
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
-    output_file = os.path.join(output_dir, f"{book_name}_full_text.txt")
-    full_text = "\n".join(all_pages_text)
-    full_text = clean_text(full_text)
-    full_text = additional_cleaning(full_text)
-    with open(output_file, 'w', encoding='utf-8') as f:
-        f.write(full_text)
-    print(f"All content saved to: {output_file}")
 
 def extract_book(pdf_path, use_toc=True, extract_mode="chapters", output_base_dir="extracted_pdf", progress_callback=None):
     if progress_callback:
