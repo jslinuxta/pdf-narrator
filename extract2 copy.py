@@ -233,7 +233,7 @@ def save_whole_book(book_name, all_pages_text, output_dir):
         f.write(full_text)
     print(f"All content saved to: {output_file}")
 
-def extract_book(pdf_path, use_toc=True, extract_mode="chapters", output_base_dir="extracted_pdf", progress_callback=None):
+def extract_book(pdf_path, use_toc=True, extract_mode="chapters", output_base_dir="extracted_books", progress_callback=None):
     """
     Extract book text from a PDF.
     :param pdf_path: Path to the input PDF file
@@ -253,7 +253,7 @@ def extract_book(pdf_path, use_toc=True, extract_mode="chapters", output_base_di
     deduplicated_t = deduplicate_toc(toc)
     book_name = os.path.splitext(os.path.basename(pdf_path))[0]
 
-    # Output directory structure: extracted_pdf/<book_name>/
+    # Output directory structure: extracted_books/<book_name>/
     output_dir = output_base_dir
     os.makedirs(output_dir, exist_ok=True)
 
@@ -278,7 +278,7 @@ if __name__ == '__main__':
 
     pdf_path = sys.argv[1]
     try:
-        extract_book(pdf_path, use_toc=True, extract_mode="chapters", output_base_dir="extracted_pdf")
+        extract_book(pdf_path, use_toc=True, extract_mode="chapters", output_base_dir="extracted_books")
     except Exception as e:
         print(f"Error during extraction: {e}")
         sys.exit(1)

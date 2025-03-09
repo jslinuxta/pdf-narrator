@@ -2,6 +2,8 @@ import fitz
 import regex as re
 import os
 import sys
+import zipfile
+import tempfile
 def ensure_lines_end_with_period(text):
     """
     Ensures each line ends with a period by merging lines until a period is reached.
@@ -233,29 +235,148 @@ def save_chapters(chapters, book_name, output_dir):
             f.write(text)
     print(f"Chapters saved in directory: {output_dir}")
 
-
-def extract_book(pdf_path, use_toc=True, extract_mode="chapters", output_base_dir="extracted_pdf", progress_callback=None):
+def parse_epub(epub_path, output_dir, progress_callback=None):
+    """
+    Parse an EPUB file and extract chapters based on the internal file structure.
+    
+    Args:
+        epub_path: Path to the EPUB file
+        output_dir: Directory to save extracted content
+        progress_callback: Optional callback function for progress updates
+    """
     if progress_callback:
         progress_callback(10)
-    if not os.path.isfile(pdf_path):
-        raise FileNotFoundError(f"File '{pdf_path}' does not exist.")
-    doc = fitz.open(pdf_path)
-    all_pages_text = extract_cleaned_text(doc)
-    toc = get_table_of_contents(doc)
-    deduplicated_toc = deduplicate_toc(toc)
-    book_name = os.path.splitext(os.path.basename(pdf_path))[0]
-    output_dir = output_base_dir
-    os.makedirs(output_dir, exist_ok=True)
-    if use_toc and deduplicated_toc and extract_mode == "chapters":
-        chapters = structure_text_by_toc(deduplicated_toc, all_pages_text)
-        save_chapters(chapters, book_name, output_dir)
-    else:
-        save_whole_book(book_name, all_pages_text, output_dir)
-    doc.close()
-    print("Extraction complete.")
+        
+    try:
+        # Open the document with PyMuPDF for metadata
+        doc = fitz.open(epub_path)
+        print(f"Successfully opened '{os.path.basename(epub_path)}'")
+        
+        # Get metadata
+        metadata = doc.metadata
+        book_title = metadata.get("title") if metadata.get("title") else os.path.splitext(os.path.basename(epub_path))[0]
+        
+        # Clean the book title to use as a folder name
+        safe_title = re.sub(r'[^\w\s-]', '', book_title).strip().replace(' ', '_')
+        if not safe_title:
+            safe_title = "unnamed_book"
+            
+        # Create output directory
+        os.makedirs(output_dir, exist_ok=True)
+        
+        if progress_callback:
+            progress_callback(30)
+            
+        # Extract content directly from the EPUB zip structure
+        with zipfile.ZipFile(epub_path, 'r') as epub_zip:
+            # Find the content files (HTML files)
+            content_files = [f for f in epub_zip.namelist() if f.endswith(('.html', '.xhtml', '.htm'))]
+            
+            # Sort the files - many EPUBs have numbered filenames
+            content_files.sort()
+            
+            print(f"Found {len(content_files)} content files inside EPUB")
+            
+            if progress_callback:
+                progress_callback(50)
+                
+            # Create a temporary directory to extract individual files
+            with tempfile.TemporaryDirectory() as temp_dir:
+                total_files = len(content_files)
+                
+                # Extract each content file as a separate chapter
+                for i, html_file in enumerate(content_files):
+                    try:
+                        # Extract the file to temp directory
+                        extracted_path = os.path.join(temp_dir, os.path.basename(html_file))
+                        with open(extracted_path, 'wb') as f:
+                            f.write(epub_zip.read(html_file))
+                        
+                        # Use PyMuPDF to extract the formatted text
+                        try:
+                            html_doc = fitz.open(extracted_path)
+                            if html_doc.page_count > 0:
+                                text = ""
+                                for page_num in range(html_doc.page_count):
+                                    page = html_doc.load_page(page_num)
+                                    text += page.get_text("text") + "\n\n"
+                                
+                                # Perform text cleanup
+                                text = clean_text(text)
+                                text = additional_cleaning(text)
+                                
+                                # Name files with padding for proper sorting
+                                padding = len(str(total_files))
+                                output_file = os.path.join(output_dir, f"{str(i).zfill(padding)}_Chapter_{i}.txt")
+                                
+                                with open(output_file, "w", encoding="utf-8") as f:
+                                    f.write(text)
+                                
+                                print(f"Extracted: Chapter {i} (from {html_file})")
+                            
+                            html_doc.close()
+                            
+                            # Update progress
+                            if progress_callback:
+                                progress = 50 + int((i / total_files) * 50)
+                                progress_callback(progress)
+                                
+                        except Exception as e:
+                            print(f"Error processing {html_file} with PyMuPDF: {e}")
+                            
+                    except Exception as e:
+                        print(f"Error extracting {html_file}: {e}")
+        
+        print(f"Extracted content saved to {output_dir}")
+        if progress_callback:
+            progress_callback(100)
+            
+        doc.close()
+        return output_dir
+        
+    except Exception as e:
+        print(f"Error processing {epub_path}: {e}")
+        if 'doc' in locals():
+            doc.close()
+        raise e
+    
+def extract_book(file_path, use_toc=True, extract_mode="chapters", output_dir="extracted_books", progress_callback=None):
     if progress_callback:
-        progress_callback(100)
-    return output_dir
+        progress_callback(10)
+        
+    if not os.path.isfile(file_path):
+        raise FileNotFoundError(f"File '{file_path}' does not exist.")
+        
+    # Determine file type by extension
+    file_ext = os.path.splitext(file_path)[1].lower()
+    book_name = os.path.splitext(os.path.basename(file_path))[0]
+    
+    # Create output directory
+    os.makedirs(output_dir, exist_ok=True)
+    
+    if file_ext == '.epub':
+        # Process EPUB file
+        return parse_epub(file_path, output_dir, progress_callback)
+    elif file_ext == '.pdf':
+        # Process PDF file (existing functionality)
+        doc = fitz.open(file_path)
+        all_pages_text = extract_cleaned_text(doc)
+        toc = get_table_of_contents(doc)
+        deduplicated_toc = deduplicate_toc(toc)
+        
+        if use_toc and deduplicated_toc and extract_mode == "chapters":
+            chapters = structure_text_by_toc(deduplicated_toc, all_pages_text)
+            save_chapters(chapters, book_name, output_dir)
+        else:
+            save_whole_book(book_name, all_pages_text, output_dir)
+        
+        doc.close()
+        print("Extraction complete.")
+        if progress_callback:
+            progress_callback(100)
+        return output_dir
+    else:
+        raise ValueError(f"Unsupported file format: {file_ext}. Supported formats: .pdf, .epub")
 '''
 if __name__ == "__main__":
     if len(sys.argv) < 2:
@@ -263,7 +384,7 @@ if __name__ == "__main__":
         sys.exit(1)
     pdf_path = sys.argv[1]
     try:
-        extract_book(pdf_path, use_toc=True, extract_mode="chapters", output_base_dir="extracted_pdf")
+        extract_book(pdf_path, use_toc=True, extract_mode="chapters", output_dir="extracted_books")
     except Exception as e:
         print(f"Error during extraction: {e}")
         sys.exit(1)

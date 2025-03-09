@@ -234,7 +234,7 @@ def save_chapters(chapters, book_name, output_dir):
     print(f"Chapters saved in directory: {output_dir}")
 
 
-def extract_book(pdf_path, use_toc=True, extract_mode="chapters", output_base_dir="extracted_pdf", progress_callback=None):
+def extract_book(pdf_path, use_toc=True, extract_mode="chapters", output_base_dir="extracted_books", progress_callback=None):
     if progress_callback:
         progress_callback(10)
     if not os.path.isfile(pdf_path):
@@ -263,7 +263,7 @@ if __name__ == "__main__":
         sys.exit(1)
     pdf_path = sys.argv[1]
     try:
-        extract_book(pdf_path, use_toc=True, extract_mode="chapters", output_base_dir="extracted_pdf")
+        extract_book(pdf_path, use_toc=True, extract_mode="chapters", output_base_dir="extracted_books")
     except Exception as e:
         print(f"Error during extraction: {e}")
         sys.exit(1)

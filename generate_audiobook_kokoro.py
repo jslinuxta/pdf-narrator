@@ -74,6 +74,7 @@ def generate_audiobooks_kokoro(
     update_estimate_callback=None,    # receives time-estimate updates (optional)
     pause_event=None
 ):
+    print(f"Input directory: {input_dir}")
     if not os.path.isdir(input_dir):
         raise FileNotFoundError(f"Input directory '{input_dir}' does not exist.")
 
@@ -82,7 +83,7 @@ def generate_audiobooks_kokoro(
         book_name = os.path.basename(os.path.normpath(input_dir))
         output_dir = os.path.join(os.path.dirname(input_dir), f"{book_name}_audio")
     os.makedirs(output_dir, exist_ok=True)
-
+    print(f"Output directory: {output_dir}")
     # Gather .txt files and sort them
     files = sorted(f for f in os.listdir(input_dir) if f.lower().endswith('.txt'))
     total_files = len(files)
@@ -95,6 +96,7 @@ def generate_audiobooks_kokoro(
     for f in files:
         with open(os.path.join(input_dir, f), 'r', encoding='utf-8') as tempf:
             total_text_length += len(tempf.read())
+    print(f"Files to process: {total_files}, Total text length: {total_text_length} characters")
     total_characters_processed = 0
     total_time_spent = 0.0
     recent_times = []

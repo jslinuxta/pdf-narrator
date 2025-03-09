@@ -64,7 +64,7 @@ class SourceFrame(tb.Frame):
         # Title
         source_label = tb.Label(
             self, 
-            text="PDF Source & Extraction", 
+            text="Book Source & Extraction", 
             style="Secondary.TLabel", 
             font="-size 14 -weight bold"
         )
@@ -76,7 +76,7 @@ class SourceFrame(tb.Frame):
 
         tb.Radiobutton(
             source_option_frame, 
-            text="Single PDF", 
+            text="Single Book (PDF/EPUB)", 
             variable=self.source_option, 
             value="single",
             command=self._update_ui
@@ -84,7 +84,7 @@ class SourceFrame(tb.Frame):
 
         tb.Radiobutton(
             source_option_frame, 
-            text="Batch PDFs (select folder)", 
+            text="Batch Books (select folder)", 
             variable=self.source_option, 
             value="batch",
             command=self._update_ui
@@ -103,7 +103,7 @@ class SourceFrame(tb.Frame):
         single_frame.pack(pady=5, fill=tk.X)
         self.single_frame = single_frame  # For toggling
 
-        tb.Label(single_frame, text="Select PDF File (Single):").pack(side=tk.LEFT, padx=5)
+        tb.Label(single_frame, text="Select Book File (PDF/EPUB):").pack(side=tk.LEFT, padx=5)
         tb.Entry(single_frame, textvariable=self.pdf_path, state=tk.NORMAL).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=5)
         tb.Button(single_frame, text="Browse", command=self._browse_single_pdf).pack(side=tk.LEFT, padx=5)
 
@@ -179,25 +179,24 @@ class SourceFrame(tb.Frame):
         # Initialize or reuse the existing QApplication instance
         qt_app = QApplication.instance() or QApplication(sys.argv)
 
-        # Open QFileDialog to select a single PDF file
+        # Open QFileDialog to select a single file (PDF or EPUB)
         path, _ = QFileDialog.getOpenFileName(
             None,
-            "Select PDF File",
+            "Select Book File",
             self.project_dir,
-            "PDF Files (*.pdf)"
+            "Book Files (*.pdf *.epub);;PDF Files (*.pdf);;EPUB Files (*.epub);;All Files (*.*)"
         )
         if path:  # If a file was selected
             self.pdf_path.set(path)
 
-            # Auto-populate extracted_text_dir for the single PDF
+            # Auto-populate extracted_text_dir for the single file
             book_name = os.path.splitext(os.path.basename(path))[0]
-            extracted_text_dir = os.path.join(self.project_dir, "extracted_pdf", book_name)
+            extracted_text_dir = os.path.join(self.project_dir, "extracted_books", book_name)
             self.extracted_text_dir.set(extracted_text_dir)
 
             # Update the audiobook output folder in the parent app
             if hasattr(self.master.master, 'audio_frame'):  # Ensure parent has the audio_frame attribute
                 self.master.master.audio_frame.update_audio_output_dir(book_name)
-
 
     def _browse_pdf_folder(self):
         # Initialize or reuse the existing QApplication instance
@@ -206,7 +205,7 @@ class SourceFrame(tb.Frame):
         # Open QFileDialog to select a folder
         folder = QFileDialog.getExistingDirectory(
             None,
-            "Select Folder Containing PDFs",
+            "Select Folder Containing Books (PDF/EPUB)",
             self.project_dir
         )
         if folder:  # If a folder was selected
@@ -216,7 +215,7 @@ class SourceFrame(tb.Frame):
             folder_name = os.path.basename(folder.rstrip(os.sep))
 
             # Set extracted_text_dir as the base output folder for batch mode
-            extracted_text_dir = os.path.join(self.project_dir, "extracted_pdf", folder_name)
+            extracted_text_dir = os.path.join(self.project_dir, "extracted_books", folder_name)
             self.extracted_text_dir.set(extracted_text_dir)
 
             # Update the audiobook output folder in the parent app
@@ -525,6 +524,7 @@ class ProgressFrame(tb.Frame):
                     if any(file.lower().endswith(".txt") for file in files):  # Process folders with .txt files
                         rel_path = os.path.relpath(root, manual_extracted_dir)
                         output_subfolder = os.path.join(audio_root, rel_path)
+                        
                         os.makedirs(output_subfolder, exist_ok=True)
                         all_extracted_folders.append((root, output_subfolder))
 
@@ -535,17 +535,17 @@ class ProgressFrame(tb.Frame):
                     raise Exception("Batch source folder is invalid or doesn't exist.")
 
                 # Recursively find all PDFs and process them
-                pdf_files = []
+                book_files = []
                 for root, _, files in os.walk(source_folder):
                     for file in files:
-                        if file.lower().endswith(".pdf"):
-                            pdf_files.append(os.path.join(root, file))
+                        if file.lower().endswith(('.pdf', '.epub')):
+                            book_files.append(os.path.join(root, file))
 
-                if not pdf_files:
-                    raise Exception("No PDF files found in the selected folder.")
+                if not book_files:
+                    raise Exception("No PDF or EPUB files found in the selected folder.")
 
-                total_pdfs = len(pdf_files)
-                for i, pdf_path in enumerate(pdf_files, start=1):
+                total_pdfs = len(book_files)
+                for i, pdf_path in enumerate(book_files, start=1):
                     if self.cancellation_flag:
                         raise Exception("Process canceled by user during batch extraction.")
 
@@ -564,7 +564,7 @@ class ProgressFrame(tb.Frame):
                     # Extract PDF to its designated folder
                     extract_book(
                         pdf_path, use_toc=use_toc, extract_mode=extract_mode,
-                        output_base_dir=extracted_text_base, progress_callback=extraction_progress_callback
+                        output_dir=extracted_text_base, progress_callback=extraction_progress_callback
                     )
                     self.log_message(f"Extracted: {pdf_path}, saved to {extracted_text_base}")
                     all_extracted_folders.append((extracted_text_base, os.path.join(audio_root, folder_part)))
@@ -587,7 +587,7 @@ class ProgressFrame(tb.Frame):
                     pdf_path,
                     use_toc=use_toc,
                     extract_mode=extract_mode,
-                    output_base_dir=extracted_root,  # e.g. "extracted_pdf"
+                    output_dir=extracted_root,  # e.g. "extracted_books"
                     progress_callback=extraction_progress_callback
                 )
 
@@ -704,7 +704,7 @@ class AudiobookApp(tb.Window):
         self.selected_theme = self._load_theme_from_config()
         super().__init__(*args, themename=self.selected_theme, **kwargs)
 
-        self.title("PDF Narrator (Kokoro Edition)")
+        self.title("PDF Narrator")
         self.geometry("1000x800")
 
         # Handle window close
@@ -717,7 +717,7 @@ class AudiobookApp(tb.Window):
         title_label = tb.Label(header_frame, text="PDF Narrator", font="-size 16 -weight bold")
         title_label.pack()
         
-        subtitle_label = tb.Label(header_frame, text="Convert your PDFs into narrated audiobooks (Kokoro)")
+        subtitle_label = tb.Label(header_frame, text="Convert your PDFs and EPUBs into narrated audiobooks")
         subtitle_label.pack(pady=(5, 0))
 
         # Notebook

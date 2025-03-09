@@ -1,6 +1,6 @@
-# Ignore everything in the extracted_pdf folder except the folder itself
-extracted_pdf/*
-!extracted_pdf/.gitkeep
+# Ignore everything in the extracted_books folder except the folder itself
+extracted_books/*
+!extracted_books/.gitkeep
 
 # Ignore everything in the audiobooks folder except the folder itself
 audiobooks/*
