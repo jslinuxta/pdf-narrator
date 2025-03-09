@@ -72,7 +72,8 @@ def generate_audiobooks_kokoro(
     progress_callback=None,         # receives progress updates (e.g. percentage)
     cancellation_flag=None,
     update_estimate_callback=None,    # receives time-estimate updates (optional)
-    pause_event=None
+    pause_event=None,
+    file_callback=None
 ):
     print(f"Input directory: {input_dir}")
     if not os.path.isdir(input_dir):
@@ -102,20 +103,30 @@ def generate_audiobooks_kokoro(
     recent_times = []
 
     def chunk_progress_callback(chars_in_chunk, chunk_duration):
-        nonlocal total_characters_processed, total_time_spent, recent_times
+        nonlocal total_characters_processed, total_time_spent
+        if chars_in_chunk <= 0:
+            return
+
         total_characters_processed += chars_in_chunk
         total_time_spent += chunk_duration
-        time_per_char = chunk_duration / chars_in_chunk if chars_in_chunk > 0 else 0
-        recent_times.append(time_per_char)
-        if len(recent_times) > 5:
-            recent_times.pop(0)
-        recent_avg = sum(recent_times) / len(recent_times) if recent_times else 0
-        overall_avg = total_time_spent / total_characters_processed if total_characters_processed else 0
-        weighted_avg = 0.7 * recent_avg + 0.3 * overall_avg
-        chars_left = total_text_length - total_characters_processed
-        remaining_time = weighted_avg * chars_left
+
+        # Avoid division by zero
+        if total_characters_processed == 0:
+            return
+
+        # Calculate average time per character
+        avg_time_per_char = total_time_spent / total_characters_processed
+
+        # Estimate total time for processing the entire text
+        estimated_total_time = avg_time_per_char * total_text_length
+
+        # Calculate remaining time (make sure it's not negative)
+        remaining_time = max(0, estimated_total_time - total_time_spent)
+
+        # Optionally, you can smooth this value using a low-pass filter if it's still too jumpy.
         if update_estimate_callback:
-            update_estimate_callback(max(remaining_time, 0))
+            update_estimate_callback(max(1, int(remaining_time)))
+
 
     print("=== Starting audiobook generation ===")
     generated_files = []
@@ -128,6 +139,8 @@ def generate_audiobooks_kokoro(
         if progress_callback:
             progress_callback(int((i / total_files) * 100))
         input_path = os.path.join(input_dir, text_file)
+        if file_callback:
+            file_callback(f"Processing chapter: {text_file}", i, total_files)
         base_name = os.path.splitext(text_file)[0]
         output_path = os.path.join(output_dir, f"{base_name}{audio_format}")
         print(f"Generating audio for: {input_path}")

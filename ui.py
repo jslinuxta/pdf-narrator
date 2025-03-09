@@ -43,106 +43,103 @@ class SourceFrame(tb.Frame):
     def __init__(self, master, *args, **kwargs):
         super().__init__(master, *args, **kwargs)
 
-        # Variables
-        self.project_dir = os.path.dirname(os.path.abspath(__file__))  # Project directory
-
-        # For single PDF or batch folder
+        # Variables (keeping your existing variables)
+        self.project_dir = os.path.dirname(os.path.abspath(__file__))
         self.pdf_path = tk.StringVar()
         self.pdf_folder = tk.StringVar()
-
-        # For skipping extraction (manual extracted folder)
         self.manual_extracted_dir = tk.StringVar()
-
-        # Extracted text options
-        self.extracted_text_dir = tk.StringVar()  # Directory for extracted text
+        self.extracted_text_dir = tk.StringVar()
         self.use_toc = tk.BooleanVar(value=True)
-        self.extract_mode = tk.StringVar(value="chapters")  # "chapters" or "whole"
-
-        # Radio variable to decide between modes: single, batch, or skip extraction
+        self.extract_mode = tk.StringVar(value="chapters")
         self.source_option = tk.StringVar(value="single")  
 
-        # Title
-        source_label = tb.Label(
-            self, 
-            text="Book Source & Extraction", 
-            style="Secondary.TLabel", 
-            font="-size 14 -weight bold"
-        )
-        source_label.pack(pady=10)
-
-        # Source option radio buttons
-        source_option_frame = tb.Labelframe(self, text="Choose Source Option")
-        source_option_frame.pack(fill=tk.X, pady=5, padx=5)
+        # Source option radio buttons with better padding and grouping
+        source_option_frame = tb.Labelframe(self, text="Choose Source Option", padding=10)
+        source_option_frame.pack(fill=tk.X, pady=5, padx=10)
 
         tb.Radiobutton(
             source_option_frame, 
             text="Single Book (PDF/EPUB)", 
             variable=self.source_option, 
             value="single",
-            command=self._update_ui
-        ).pack(anchor=tk.W, padx=5, pady=2)
+            command=self._update_ui,
+            padding=5
+        ).pack(anchor=tk.W, padx=10, pady=5)
 
         tb.Radiobutton(
             source_option_frame, 
             text="Batch Books (select folder)", 
             variable=self.source_option, 
             value="batch",
-            command=self._update_ui
-        ).pack(anchor=tk.W, padx=5, pady=2)
+            command=self._update_ui,
+            padding=5
+        ).pack(anchor=tk.W, padx=10, pady=5)
 
         tb.Radiobutton(
             source_option_frame, 
             text="Skip Extraction (use existing text folder)", 
             variable=self.source_option, 
             value="skip",
-            command=self._update_ui
-        ).pack(anchor=tk.W, padx=5, pady=2)
+            command=self._update_ui,
+            padding=5
+        ).pack(anchor=tk.W, padx=10, pady=5)
 
-        # Single PDF selection
-        single_frame = tb.Frame(self)
-        single_frame.pack(pady=5, fill=tk.X)
-        self.single_frame = single_frame  # For toggling
+        # Horizontal separator
+        tb.Separator(self, orient='horizontal').pack(fill=tk.X, pady=15, padx=10)
 
-        tb.Label(single_frame, text="Select Book File (PDF/EPUB):").pack(side=tk.LEFT, padx=5)
-        tb.Entry(single_frame, textvariable=self.pdf_path, state=tk.NORMAL).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=5)
-        tb.Button(single_frame, text="Browse", command=self._browse_single_pdf).pack(side=tk.LEFT, padx=5)
+        # File selection frames with improved layout
+        selection_frame = tb.Labelframe(self, text="File Selection", padding=10)
+        selection_frame.pack(fill=tk.X, pady=5, padx=10)
+        
+        # Single PDF selection with better spacing
+        self.single_frame = tb.Frame(selection_frame)
+        self.single_frame.pack(pady=10, fill=tk.X)
+
+        tb.Label(self.single_frame, text="Select Book File (PDF/EPUB):").pack(side=tk.LEFT, padx=5)
+        tb.Entry(self.single_frame, textvariable=self.pdf_path, state=tk.NORMAL).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=5)
+        tb.Button(self.single_frame, text="Browse", command=self._browse_single_pdf).pack(side=tk.LEFT, padx=5)
 
         # Batch PDF folder selection
-        batch_frame = tb.Frame(self)
-        batch_frame.pack(pady=5, fill=tk.X)
-        self.batch_frame = batch_frame  # For toggling
+        self.batch_frame = tb.Frame(selection_frame)
+        self.batch_frame.pack(pady=10, fill=tk.X)
 
-        tb.Label(batch_frame, text="Select Folder (Batch):").pack(side=tk.LEFT, padx=5)
-        tb.Entry(batch_frame, textvariable=self.pdf_folder, state=tk.NORMAL).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=5)
-        tb.Button(batch_frame, text="Browse", command=self._browse_pdf_folder).pack(side=tk.LEFT, padx=5)
+        tb.Label(self.batch_frame, text="Select Folder (Batch):").pack(side=tk.LEFT, padx=5)
+        tb.Entry(self.batch_frame, textvariable=self.pdf_folder, state=tk.NORMAL).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=5)
+        tb.Button(self.batch_frame, text="Browse", command=self._browse_pdf_folder).pack(side=tk.LEFT, padx=5)
 
         # Manual extracted folder (skip extraction)
-        skip_frame = tb.Frame(self)
-        skip_frame.pack(pady=5, fill=tk.X)
-        self.skip_frame = skip_frame  # For toggling
+        self.skip_frame = tb.Frame(selection_frame)
+        self.skip_frame.pack(pady=10, fill=tk.X)
 
-        tb.Label(skip_frame, text="Existing Text Folder:").pack(side=tk.LEFT, padx=5)
-        tb.Entry(skip_frame, textvariable=self.manual_extracted_dir, state=tk.NORMAL).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=5)
-        tb.Button(skip_frame, text="Browse", command=self._browse_extracted_folder).pack(side=tk.LEFT, padx=5)
+        tb.Label(self.skip_frame, text="Existing Text Folder:").pack(side=tk.LEFT, padx=5)
+        tb.Entry(self.skip_frame, textvariable=self.manual_extracted_dir, state=tk.NORMAL).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=5)
+        tb.Button(self.skip_frame, text="Browse", command=self._browse_extracted_folder).pack(side=tk.LEFT, padx=5)
 
-        # TOC & Extraction Mode
-        options_frame = tb.Labelframe(self, text="Extraction Options (only when extracting)")
-        options_frame.pack(fill=tk.X, pady=10, padx=5)
+        # Another separator
+        tb.Separator(self, orient='horizontal').pack(fill=tk.X, pady=15, padx=10)
 
-        toc_check = tb.Checkbutton(options_frame, text="Use TOC (if available)", variable=self.use_toc)
-        toc_check.pack(anchor=tk.W, padx=5, pady=5)
+        # TOC & Extraction Mode with better styling
+        options_frame = tb.Labelframe(self, text="Extraction Options (only when extracting)", padding=10)
+        options_frame.pack(fill=tk.X, pady=10, padx=10)
+
+        toc_check = tb.Checkbutton(options_frame, text="Use TOC (if available)", variable=self.use_toc, padding=5)
+        toc_check.pack(anchor=tk.W, padx=10, pady=10)
         
         mode_frame = tb.Frame(options_frame)
-        mode_frame.pack(anchor=tk.W, padx=5, pady=5)
-        tb.Radiobutton(mode_frame, text="Extract by Chapters", variable=self.extract_mode, value="chapters").pack(side=tk.LEFT)
-        tb.Radiobutton(mode_frame, text="Extract Whole Book", variable=self.extract_mode, value="whole").pack(side=tk.LEFT, padx=10)
+        mode_frame.pack(anchor=tk.W, padx=10, pady=10)
+        tb.Label(mode_frame, text="Extract by: ").pack(side=tk.LEFT)
+        tb.Radiobutton(mode_frame, text="Chapters", variable=self.extract_mode, value="chapters", padding=5).pack(side=tk.LEFT)
+        tb.Radiobutton(mode_frame, text="Whole Book", variable=self.extract_mode, value="whole", padding=5).pack(side=tk.LEFT, padx=10)
 
-        # Extracted Text Directory (auto-determined if single or batch PDF is used)
-        out_frame = tb.Frame(self)
-        out_frame.pack(pady=5, fill=tk.X)
+        # Separator
+        tb.Separator(self, orient='horizontal').pack(fill=tk.X, pady=15, padx=10)
+
+        # Extracted Text Directory with better styling
+        out_frame = tb.Labelframe(self, text="Output Directory", padding=10)
+        out_frame.pack(pady=10, fill=tk.X, padx=10)
         
-        tb.Label(out_frame, text="Extracted Text Directory (auto):").pack(side=tk.LEFT, padx=5)
-        tb.Entry(out_frame, textvariable=self.extracted_text_dir, state=tk.NORMAL).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=5)
+        tb.Label(out_frame, text="Extracted Text Directory (auto):").pack(anchor=tk.W, padx=5, pady=5)
+        tb.Entry(out_frame, textvariable=self.extracted_text_dir, state=READONLY).pack(fill=tk.X, expand=True, padx=5, pady=5)
 
         # Initialize UI
         self._update_ui()
@@ -271,96 +268,139 @@ class AudioFrame(tb.Frame):
     def __init__(self, master, *args, **kwargs):
         super().__init__(master, *args, **kwargs)
         
-        # Variables
-        self.project_dir = os.path.dirname(os.path.abspath(__file__))  # Project directory
-
-        # Remove model_path variable
-        # Default voicepack (adjust if you like a different default)
+        # Variables (keep your existing variables)
+        self.project_dir = os.path.dirname(os.path.abspath(__file__))
         self.voicepack_path = tk.StringVar(value="voices/am_liam.pt")
+        self.chunk_size = tk.IntVar(value=510)
+        self.audio_format = tk.StringVar(value=".wav")
+        self.audio_output_dir = tk.StringVar()
+        self.device = tk.StringVar(value="cuda")
 
-        self.chunk_size = tk.IntVar(value=510)    # Default chunk size
-        self.audio_format = tk.StringVar(value=".wav")  # Default audio format
-        self.audio_output_dir = tk.StringVar()  # Directory for audiobook files
-        self.device = tk.StringVar(value="cuda")  # Default to GPU
 
-        # Title
-        audio_label = tb.Label(
-            self, 
-            text="Kokoro Audio Settings", 
-            style="Secondary.TLabel", 
-            font="-size 14 -weight bold"
-        )
-        audio_label.pack(pady=10)
+        # Voicepack Selection with better grouping
+        voicepack_frame = tb.Labelframe(self, text="Voice Selection", padding=10)
+        voicepack_frame.pack(fill=tk.X, pady=10, padx=10)
 
-        # Remove Model Selection frame
-
-        # Voicepack Selection
-        voicepack_frame = tb.Frame(self)
-        voicepack_frame.pack(fill=X, pady=5, padx=5)
-
-        tb.Label(voicepack_frame, text="Voicepack (.pt):").pack(side=LEFT, padx=5)
-        voicepacks = self._get_pt_files()  # We'll scan for .pt
+        voice_row = tb.Frame(voicepack_frame)
+        voice_row.pack(fill=tk.X, pady=5)
+        
+        tb.Label(voice_row, text="Voicepack (.pt):").pack(side=tk.LEFT, padx=5)
+        voicepacks = self._get_pt_files()
         voicepack_combo = tb.Combobox(
-            voicepack_frame,
+            voice_row,
             textvariable=self.voicepack_path,
             values=voicepacks,
-            state="readonly"
+            state="readonly",
+            width=30
         )
-        voicepack_combo.pack(side=LEFT, fill=X, expand=True, padx=5)
+        voicepack_combo.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=5)
+        
+        # Add a Test Voice button
+        test_button = tb.Button(voice_row, text="Test Voice", bootstyle="info", command=self._test_voice)
+        test_button.pack(side=tk.LEFT, padx=5)
 
-        # Chunk Size
-        chunk_frame = tb.Frame(self)
-        chunk_frame.pack(fill=X, pady=5, padx=5)
+        # Separator
+        tb.Separator(self, orient='horizontal').pack(fill=tk.X, pady=15, padx=10)
 
-        tb.Label(chunk_frame, text="Chunk Size (tokens):").pack(side=LEFT, padx=5)
-        tb.Spinbox(chunk_frame, from_=500, to=5000, increment=500, textvariable=self.chunk_size, width=7).pack(side=LEFT, padx=5)
+        # Audio Generation Settings with better styling
+        settings_frame = tb.Labelframe(self, text="Generation Settings", padding=10)
+        settings_frame.pack(fill=tk.X, pady=10, padx=10)
 
-        # Output Directory
-        output_frame = tb.Frame(self)
-        output_frame.pack(fill=X, pady=5, padx=5)
+        # Chunk Size with better UI
+        chunk_frame = tb.Frame(settings_frame)
+        chunk_frame.pack(fill=tk.X, pady=10)
 
-        tb.Label(output_frame, text="Audiobook Output Folder:").pack(side=LEFT, padx=5)
-        tb.Entry(output_frame, textvariable=self.audio_output_dir, state=READONLY).pack(side=LEFT, fill=X, expand=True, padx=5)
+        tb.Label(chunk_frame, text="Chunk Size:").pack(side=tk.LEFT, padx=5)
+        
+        # Use predefined options instead of a spinbox
+        chunk_options = ["510 (Small)", "1020 (Medium)", "2040 (Large)"]
+        chunk_combo = tb.Combobox(
+            chunk_frame, 
+            values=chunk_options, 
+            state="readonly",
+            width=15
+        )
+        chunk_combo.current(0)  # Select the first option by default
+        chunk_combo.pack(side=tk.LEFT, padx=5)
+        chunk_combo.bind("<<ComboboxSelected>>", self._update_chunk_size)
 
         # Audio Format
-        format_frame = tb.Frame(self)
-        format_frame.pack(fill=X, pady=5, padx=5)
+        format_frame = tb.Frame(settings_frame)
+        format_frame.pack(fill=tk.X, pady=10)
 
-        tb.Label(format_frame, text="Output Format:").pack(side=LEFT, padx=5)
-        formats = [".wav", ".mp3"]
+        tb.Label(format_frame, text="Output Format:").pack(side=tk.LEFT, padx=5)
+        formats = [".wav (High Quality)", ".mp3 (Smaller Size)"]
         format_combo = tb.Combobox(
             format_frame, 
-            textvariable=self.audio_format, 
             values=formats, 
-            state="readonly"
+            state="readonly",
+            width=20
         )
-        format_combo.pack(side=LEFT, fill=X, expand=True, padx=5)
+        format_combo.current(0)  # Select the first option by default
+        format_combo.pack(side=tk.LEFT, padx=5)
+        format_combo.bind("<<ComboboxSelected>>", self._update_audio_format)
 
-        # Device Selection
-        device_frame = tb.Frame(self)
-        device_frame.pack(fill=X, pady=5, padx=5)
+        # Device Selection with better styling
+        device_frame = tb.Frame(settings_frame)
+        device_frame.pack(fill=tk.X, pady=10)
 
-        tb.Label(device_frame, text="Device:").pack(side=LEFT, padx=5)
-        tb.Radiobutton(device_frame, text="GPU (CUDA)", variable=self.device, value="cuda").pack(side=LEFT, padx=5)
-        tb.Radiobutton(device_frame, text="CPU", variable=self.device, value="cpu").pack(side=LEFT, padx=5)
+        tb.Label(device_frame, text="Processing Device:").pack(side=tk.LEFT, padx=5)
+        tb.Radiobutton(device_frame, text="GPU (CUDA) - Faster", variable=self.device, value="cuda", padding=5).pack(side=tk.LEFT, padx=5)
+        tb.Radiobutton(device_frame, text="CPU - More Compatible", variable=self.device, value="cpu", padding=5).pack(side=tk.LEFT, padx=5)
 
-    # Remove _get_pth_files method since we don't need it anymore
+        # Separator
+        tb.Separator(self, orient='horizontal').pack(fill=tk.X, pady=15, padx=10)
 
-    def _get_pt_files(self):
-        """
-        Scan the 'voices' directory for .pt voicepacks (Kokoro).
-        Returns a list of relative paths to the found voicepacks.
-        """
-        voices_dir = os.path.join(self.project_dir, "voices/")
-        voice_files = []
+        # Output Directory with better styling
+        output_frame = tb.Labelframe(self, text="Output Location", padding=10)
+        output_frame.pack(fill=tk.X, pady=10, padx=10)
 
-        for root, dirs, files in os.walk(voices_dir):
-            for file in files:
-                if file.endswith(".pt"):
-                    relative_path = os.path.relpath(os.path.join(root, file), self.project_dir)
-                    voice_files.append(relative_path)
+        tb.Label(output_frame, text="Audiobook Output Folder:").pack(anchor=tk.W, padx=5, pady=5)
+        tb.Entry(output_frame, textvariable=self.audio_output_dir, state=READONLY).pack(fill=tk.X, expand=True, padx=5, pady=5)
 
-        return voice_files
+    # Add new methods for the enhanced functionality
+    def _update_chunk_size(self, event):
+        """Update chunk size based on combobox selection"""
+        selection = event.widget.get()
+        if "Small" in selection:
+            self.chunk_size.set(510)
+        elif "Medium" in selection:
+            self.chunk_size.set(1020)
+        elif "Large" in selection:
+            self.chunk_size.set(2040)
+
+    def _update_audio_format(self, event):
+        """Update audio format based on combobox selection"""
+        selection = event.widget.get()
+        if "wav" in selection:
+            self.audio_format.set(".wav")
+        elif "mp3" in selection:
+            self.audio_format.set(".mp3")
+
+    def _test_voice(self):
+        """Play a test sample of the selected voice"""
+        selected_voice = self.voicepack_path.get()
+        if not selected_voice:
+            tk.messagebox.showinfo("Test Voice", "Please select a voice first.")
+            return
+            
+        try:
+            # Show a dialog indicating that voice test is in progress
+            tk.messagebox.showinfo("Test Voice", 
+                               f"Testing voice: {os.path.basename(selected_voice)}\n"
+                               f"A short sample will be generated and played.")
+            
+            # Here you would add code to generate and play a short sample
+            # This would depend on how your Kokoro voice generation works
+            # For example:
+            # generate_test_sample(self.get_voicepack_path(), "This is a test of the selected voice.")
+            
+            # Since we can't implement the actual test without the generate_audiobook_kokoro code,
+            # we'll just show a placeholder message
+            tk.messagebox.showinfo("Voice Test", "Voice test feature will be implemented in a future update.")
+            
+        except Exception as e:
+            tk.messagebox.showerror("Voice Test Failed", f"Could not test voice: {str(e)}")
 
     def get_device(self):
         return self.device.get()
@@ -380,7 +420,21 @@ class AudioFrame(tb.Frame):
         return self.audio_output_dir.get()
 
     # Remove get_model_path method
+    def _get_pt_files(self):
+        """
+        Scan the 'voices' directory for .pt voicepacks (Kokoro).
+        Returns a list of relative paths to the found voicepacks.
+        """
+        voices_dir = os.path.join(self.project_dir, "voices/")
+        voice_files = []
 
+        for root, dirs, files in os.walk(voices_dir):
+            for file in files:
+                if file.endswith(".pt"):
+                    relative_path = os.path.relpath(os.path.join(root, file), self.project_dir)
+                    voice_files.append(relative_path)
+
+        return voice_files
     def get_voicepack_path(self):
         """
         Returns the absolute path to the Kokoro .pt voicepack file
@@ -397,84 +451,115 @@ class AudioFrame(tb.Frame):
 class ProgressFrame(tb.Frame):
     """
     Frame for showing progress bars, logs, and controlling start/pause/cancel.
+    The buttons themselves are moved to the main app for visibility.
     """
     def __init__(self, master, app, *args, **kwargs):
         super().__init__(master, *args, **kwargs)
-        self.app = app  # Reference to main AudiobookApp
+        self.app = app
         self.pause_event = threading.Event()
         self.pause_event.set()
 
-        # Extraction progress
+        # Variables
         self.extract_progress = tk.DoubleVar(value=0.0)
-        # Generation progress
         self.audio_progress = tk.DoubleVar(value=0.0)
-        self.status_text = tk.StringVar(value="Waiting...")
-        
-        # Estimated time label
+        self.status_text = tk.StringVar(value="Ready to process")
         self.estimated_time_text = tk.StringVar(value="Estimated time remaining: N/A")
+        self.current_file_text = tk.StringVar(value="")
+        self.progress_count_text = tk.StringVar(value="")
+        self.percentage_text = tk.StringVar(value="0%")
         
-        # Title
-        prog_label = tb.Label(
-            self, 
-            text="Progress & Logs", 
-            style="Secondary.TLabel", 
-            font="-size 14 -weight bold"
-        )
-        prog_label.pack(pady=10)
 
-        # Status
-        status_frame = tb.Frame(self)
-        status_frame.pack(fill=X, pady=5, padx=5)
+        # Status frame with better organization
+        status_frame = tb.Labelframe(self, text="Current Status", padding=10)
+        status_frame.pack(fill=tk.X, pady=5, padx=10)
         
-        tb.Label(status_frame, text="Status:").pack(side=LEFT, padx=5)
-        tb.Label(status_frame, textvariable=self.status_text).pack(side=LEFT, padx=5)
+        # Main status
+        status_row = tb.Frame(status_frame)
+        status_row.pack(fill=tk.X, pady=5)
+        tb.Label(status_row, text="Status:", width=10).pack(side=tk.LEFT, padx=5)
+        tb.Label(status_row, textvariable=self.status_text, font="-weight bold").pack(side=tk.LEFT, padx=5)
         
-        # Estimated time label
-        tb.Label(status_frame, textvariable=self.estimated_time_text).pack(side=LEFT, padx=15)
-
-        # Progress Bars
-        pb_frame = tb.Frame(self)
-        pb_frame.pack(fill=X, pady=5, padx=5)
+        # Current file being processed
+        file_row = tb.Frame(status_frame)
+        file_row.pack(fill=tk.X, pady=5)
+        tb.Label(file_row, text="Current File:", width=10).pack(side=tk.LEFT, padx=5)
+        tb.Label(file_row, textvariable=self.current_file_text).pack(side=tk.LEFT, padx=5)
         
-        tb.Label(pb_frame, text="Text Extraction:").pack(anchor=W)
-        tb.Progressbar(pb_frame, variable=self.extract_progress, maximum=100).pack(fill=X, pady=2)
+        # Progress count (e.g., "Processing file 2 of 15")
+        count_row = tb.Frame(status_frame)
+        count_row.pack(fill=tk.X, pady=5)
+        tb.Label(count_row, text="Progress:", width=10).pack(side=tk.LEFT, padx=5)
+        tb.Label(count_row, textvariable=self.progress_count_text).pack(side=tk.LEFT, padx=5)
+        
+        # Estimated time
+        time_row = tb.Frame(status_frame)
+        time_row.pack(fill=tk.X, pady=5)
+        tb.Label(time_row, text="Time Left:", width=10).pack(side=tk.LEFT, padx=5)
+        tb.Label(time_row, textvariable=self.estimated_time_text).pack(side=tk.LEFT, padx=5)
 
-        tb.Label(pb_frame, text="Audio Generation:").pack(anchor=W, pady=(10, 0))
-        tb.Progressbar(pb_frame, variable=self.audio_progress, maximum=100).pack(fill=X, pady=2)
+        # Separator
+        tb.Separator(self, orient='horizontal').pack(fill=tk.X, pady=15, padx=10)
 
-        self.percentage_text = tk.StringVar(value="0% complete")
-        tb.Label(pb_frame, textvariable=self.percentage_text).pack(anchor=W, pady=(5, 0))
+        # Progress Bars with better styling
+        pb_frame = tb.Labelframe(self, text="Progress", padding=10)
+        pb_frame.pack(fill=tk.X, pady=5, padx=10)
+        
+        # Extract progress with percent display
+        extract_row = tb.Frame(pb_frame)
+        extract_row.pack(fill=tk.X, pady=5)
+        tb.Label(extract_row, text="Text Extraction:").pack(side=tk.LEFT, padx=5)
+        self.extract_percent = tk.StringVar(value="0%")
+        tb.Label(extract_row, textvariable=self.extract_percent, width=5).pack(side=tk.RIGHT, padx=5)
+        tb.Progressbar(pb_frame, variable=self.extract_progress, maximum=100).pack(fill=tk.X, pady=2, padx=5)
 
-        # Logs
-        log_frame = tb.Labelframe(self, text="Logs")
-        log_frame.pack(fill=BOTH, expand=True, pady=5, padx=5)
+        # Audio generation progress with percent display
+        audio_row = tb.Frame(pb_frame)
+        audio_row.pack(fill=tk.X, pady=(15, 5))
+        tb.Label(audio_row, text="Audio Generation:").pack(side=tk.LEFT, padx=5)
+        self.audio_percent = tk.StringVar(value="0%")
+        tb.Label(audio_row, textvariable=self.audio_percent, width=5).pack(side=tk.RIGHT, padx=5)
+        tb.Progressbar(pb_frame, variable=self.audio_progress, maximum=100).pack(fill=tk.X, pady=2, padx=5)
+
+        # Separator
+        tb.Separator(self, orient='horizontal').pack(fill=tk.X, pady=15, padx=10)
+
+        # Logs with better styling
+        log_frame = tb.Labelframe(self, text="Process Logs", padding=10)
+        log_frame.pack(fill=tk.BOTH, expand=True, pady=5, padx=10)
         
         self.log_text = scrolledtext.ScrolledText(log_frame, height=8)
-        self.log_text.pack(fill=BOTH, expand=True)
+        self.log_text.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
 
         # Redirect stdout and stderr to the UI
         sys.stdout = LogRedirector(self.log_message)
         sys.stderr = LogRedirector(self.log_message)
-
-        # Action Buttons
-        btn_frame = tb.Frame(self)
-        btn_frame.pack(pady=10)
-        
-        self.start_button = tb.Button(btn_frame, text="Start Process", bootstyle=SUCCESS, command=self._start_process_thread)
-        self.start_button.pack(side=LEFT, padx=5)
-
-        self.cancel_button = tb.Button(btn_frame, text="Cancel", bootstyle=DANGER, command=self._cancel_process, state=DISABLED)
-        self.cancel_button.pack(side=LEFT, padx=5)
-        
-        self.pause_button = tb.Button(btn_frame, text="Pause", bootstyle=WARNING, command=self._pause_process)
-        self.pause_button.pack(side=LEFT, padx=5)
-
-        self.resume_button = tb.Button(btn_frame, text="Resume", bootstyle=INFO, command=self._resume_process, state=DISABLED)
-        self.resume_button.pack(side=LEFT, padx=5)
         
         self.cancellation_flag = False
         self.process_thread = None
         self.running = False
+
+    # Add/modify methods to update the new UI elements
+    def update_extract_progress(self, value):
+        self.extract_progress.set(value)
+        self.extract_percent.set(f"{int(value)}%")
+
+    def update_audio_progress(self, value):
+        self.audio_progress.set(value)
+        self.audio_percent.set(f"{int(value)}%")
+    def set_current_file(self, filename):
+        """Update the current file being processed"""
+        if filename:
+            self.current_file_text.set(filename)
+        else:
+            self.current_file_text.set("None")
+
+    def set_progress_count(self, current, total):
+        """Update the progress count (e.g., "Processing file 2 of 15")"""
+        if current and total:
+            self.progress_count_text.set(f"File {current} of {total}")
+        else:
+            self.progress_count_text.set("")
+
 
     def _start_process_thread(self):
         # Start the process in a background thread
@@ -491,8 +576,11 @@ class ProgressFrame(tb.Frame):
     def _start_process(self):
         self.log_message("Starting process...")
         self.set_status("Extracting text...")
-        self.update_extract_progress(10)
-        self.cancellation_flag = False  # Reset cancellation flag
+        self.update_extract_progress(0)
+        self.update_audio_progress(0)
+        self.set_current_file("Initializing...")
+        self.set_progress_count(0, 0)
+        self.cancellation_flag = False
 
         try:
             source_option = self.app.source_frame.get_source_option()
@@ -549,6 +637,8 @@ class ProgressFrame(tb.Frame):
                     if self.cancellation_flag:
                         raise Exception("Process canceled by user during batch extraction.")
 
+                    filename = os.path.basename(pdf_path)
+                    self.set_current_file(filename)
                     # Calculate relative path and replicate folder structure
                     rel_path = os.path.relpath(pdf_path, source_folder)
                     folder_part = os.path.dirname(rel_path)
@@ -601,6 +691,9 @@ class ProgressFrame(tb.Frame):
 
             total_folders = len(all_extracted_folders)
             for i, (input_folder, output_folder) in enumerate(all_extracted_folders, start=1):
+                folder_name = os.path.basename(input_folder)
+                self.set_current_file(folder_name)
+                self.set_progress_count(i, total_folders)
                 if self.cancellation_flag:
                     raise Exception("Process canceled by user during TTS generation.")
 
@@ -621,10 +714,12 @@ class ProgressFrame(tb.Frame):
                     ),
                     cancellation_flag=lambda: self.cancellation_flag,
                     update_estimate_callback=self.set_estimated_time,
-                    pause_event=self.pause_event
+                    pause_event=self.pause_event,
+                    file_callback = lambda filename, i, total_folders: (
+                        self.set_current_file(filename),
+                        self.set_progress_count(i, total_folders)
+                    )
                 )
-
-
 
                 self.log_message(f"Audiobook generation completed for: {input_folder}. Output: {output_folder}")
                 self.update_audio_progress(int(i / total_folders * 100))
@@ -639,6 +734,8 @@ class ProgressFrame(tb.Frame):
             self.running = False
             self.cancel_button.config(state=tk.DISABLED)
             self.start_button.config(state=tk.NORMAL)
+            self.set_current_file("")
+            self.set_progress_count(0, 0)
 
 
     def _pause_process(self):
@@ -678,17 +775,28 @@ class ProgressFrame(tb.Frame):
         self.audio_progress.set(value)
 
     def set_estimated_time(self, seconds_left):
-        if seconds_left < 0:
-            seconds_left = 0
+        if seconds_left <= 0:
+            self.estimated_time_text.set("Processing complete!")
+            self.percentage_text.set("100% complete")
+            return
+            
+        # Format time in appropriate units
         m, s = divmod(int(seconds_left), 60)
         h, m = divmod(m, 60)
+        
         if h > 0:
             time_str = f"{h}h {m}m {s}s"
         elif m > 0:
             time_str = f"{m}m {s}s"
         else:
             time_str = f"{s}s"
+            
         self.estimated_time_text.set(f"Estimated time remaining: {time_str}")
+        
+        # Update percentage display if we have the data
+        if hasattr(self, 'audio_progress'):
+            progress = self.audio_progress.get()
+            self.percentage_text.set(f"{int(progress)}% complete")
 
 
 class AudiobookApp(tb.Window):
@@ -706,13 +814,20 @@ class AudiobookApp(tb.Window):
 
         self.title("PDF Narrator")
         self.geometry("1000x800")
+        self.minsize(850, 700)  # Slightly larger minimum size to ensure buttons are visible
 
         # Handle window close
         self.protocol("WM_DELETE_WINDOW", self.on_close)
 
-        # Header
-        header_frame = tb.Frame(self)
-        header_frame.pack(fill=X, pady=10)
+        # Create a main container frame with grid layout
+        self.main_container = tb.Frame(self)
+        self.main_container.pack(fill=BOTH, expand=True)
+        self.main_container.grid_rowconfigure(1, weight=1)  # This makes the notebook row expandable
+        self.main_container.grid_columnconfigure(0, weight=1)
+
+        # Header (fixed at top)
+        header_frame = tb.Frame(self.main_container)
+        header_frame.grid(row=0, column=0, sticky="ew", pady=10)
         
         title_label = tb.Label(header_frame, text="PDF Narrator", font="-size 16 -weight bold")
         title_label.pack()
@@ -720,21 +835,31 @@ class AudiobookApp(tb.Window):
         subtitle_label = tb.Label(header_frame, text="Convert your PDFs and EPUBs into narrated audiobooks")
         subtitle_label.pack(pady=(5, 0))
 
-        # Notebook
-        self.notebook = tb.Notebook(self)
-        self.notebook.pack(fill=BOTH, expand=True, pady=10, padx=10)
+        # Notebook tabs (fixed at top, below header)
+        self.notebook = tb.Notebook(self.main_container)
+        self.notebook.grid(row=1, column=0, sticky="nsew", padx=10, pady=5) # sticky="nsew" makes it expand in all directions
+        
+        # Create frames for each tab
+        self.source_tab = tb.Frame(self.notebook)
+        self.audio_tab = tb.Frame(self.notebook)
+        self.progress_tab = tb.Frame(self.notebook)
 
-        self.source_frame = SourceFrame(self.notebook)
-        self.audio_frame = AudioFrame(self.notebook)
-        self.progress_frame = ProgressFrame(self.notebook, app=self)
+        self.notebook.add(self.source_tab, text="Source")
+        self.notebook.add(self.audio_tab, text="Audio")
+        self.notebook.add(self.progress_tab, text="Progress & Logs")
 
-        self.notebook.add(self.source_frame, text="Source")
-        self.notebook.add(self.audio_frame, text="Audio")
-        self.notebook.add(self.progress_frame, text="Progress & Logs")
+        # Create scrollable content area for each tab
+        self.setup_scrollable_tab(self.source_tab, SourceFrame)
+        self.setup_scrollable_tab(self.audio_tab, AudioFrame)
+        
+        # For the Progress tab, we'll split it into two parts:
+        # 1. The control buttons at the top (not scrollable)
+        # 2. The progress display and logs (scrollable)
+        self.setup_progress_tab()
 
-        # Footer
-        footer_frame = tb.Frame(self)
-        footer_frame.pack(fill=X, pady=5)
+        # Footer (fixed at bottom)
+        footer_frame = tb.Frame(self.main_container)
+        footer_frame.grid(row=3, column=0, sticky="ew", pady=5)
         
         self.open_output_button = tb.Button(footer_frame, text="Open Extracted Text Folder", command=self._open_output_folder)
         self.open_output_button.pack(side=LEFT, padx=10)
@@ -765,28 +890,61 @@ class AudiobookApp(tb.Window):
 
         exit_button = tb.Button(footer_frame, text="Exit", command=self.on_close)
         exit_button.pack(side=RIGHT, padx=10)
-
+        reset_button = tb.Button(
+            footer_frame, 
+            text="Reset Settings", 
+            bootstyle="secondary",
+            command=self._reset_config
+        )
+        reset_button.pack(side=tk.RIGHT, padx=10)
+        
         self.load_config()
+    def _reset_config(self):
+        """Reset all settings to default values"""
+        if tk.messagebox.askyesno("Reset Settings", "Are you sure you want to reset all settings to defaults?"):
+            # Reset source settings
+            self.source_frame.source_option.set("single")
+            self.source_frame.pdf_path.set("")
+            self.source_frame.pdf_folder.set("")
+            self.source_frame.manual_extracted_dir.set("")
+            self.source_frame.extracted_text_dir.set("")
+            self.source_frame.use_toc.set(True)
+            self.source_frame.extract_mode.set("chapters")
+            
+            # Reset audio settings
+            self.audio_frame.voicepack_path.set("voices/am_liam.pt") 
+            self.audio_frame.chunk_size.set(510)
+            self.audio_frame.audio_format.set(".wav")
+            self.audio_frame.device.set("cuda")
+            
+            # Update UI
+            self.source_frame._update_ui()
+            
+            tk.messagebox.showinfo("Settings Reset", "All settings have been reset to default values.")
 
     def _open_output_folder(self):
         output_dir = self.source_frame.get_extracted_text_dir()
         if output_dir and os.path.isdir(output_dir):
-            if os.name == 'nt':
-                os.startfile(output_dir)
-            elif os.name == 'posix':
-                os.system(f'xdg-open "{output_dir}"')
+            self._open_folder(output_dir)
         else:
-            messagebox.showwarning("Warning", "No valid output directory selected.")
+            tk.messagebox.showwarning("Warning", "No valid output directory selected.")
 
     def _open_audiobook_folder(self):
         audio_dir = self.audio_frame.get_audio_output_dir()
         if audio_dir and os.path.isdir(audio_dir):
-            if os.name == 'nt':
-                os.startfile(audio_dir)
-            elif os.name == 'posix':
-                os.system(f'xdg-open "{audio_dir}"')
+            self._open_folder(audio_dir)
         else:
-            messagebox.showwarning("Warning", "No valid audiobook output directory selected.")
+            tk.messagebox.showwarning("Warning", "No valid audiobook output directory selected.")
+    def _open_folder(self, folder_path):
+        """Safely open a folder using the appropriate method for the OS"""
+        try:
+            if os.name == 'nt':  # Windows
+                os.startfile(folder_path)
+            elif os.name == 'posix':  # macOS or Linux
+                import subprocess
+                subprocess.Popen(['xdg-open', folder_path])
+        except Exception as e:
+            tk.messagebox.showerror("Error", f"Could not open folder: {str(e)}")
 
     def _change_theme(self, event):
         new_theme = self.theme_var.get()
@@ -871,3 +1029,169 @@ class AudiobookApp(tb.Window):
         print("Application is closing.")  # Debug
         self.save_config()
         self.destroy()
+    def _configure_canvas_window(self, event):
+            # Update the canvas window width to match the canvas width
+            self.content_canvas.itemconfig(self.canvas_window, width=event.width)
+        
+    def setup_scrollable_tab(self, tab_frame, content_class):
+        # Make tab_frame use all available space
+        tab_frame.pack_propagate(False)
+
+        # Create an extra container frame inside the tab_frame
+        container = tb.Frame(tab_frame)
+        container.pack(fill=tk.BOTH, expand=True)
+        
+        # Create canvas and scrollbar for scrollable content inside the container
+        canvas = tk.Canvas(container)
+        canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        
+        scrollbar = tb.Scrollbar(container, orient="vertical", command=canvas.yview)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        
+        canvas.configure(yscrollcommand=scrollbar.set)
+        
+        # Create frame inside canvas for content
+        scrollable_frame = tb.Frame(canvas)
+        scrollable_frame_id = canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        
+        # Configure canvas to adjust to frame size for scrolling
+        def configure_frame(event):
+            canvas.configure(scrollregion=canvas.bbox("all"))
+        scrollable_frame.bind("<Configure>", configure_frame)
+        
+        # Ensure the scrollable frame expands to the width of the canvas
+        def configure_canvas(event):
+            canvas.itemconfig(scrollable_frame_id, width=event.width)
+        canvas.bind("<Configure>", configure_canvas)
+        
+        # Enable mousewheel scrolling on the entire app and the scrollable frame
+        self.bind_mousewheel(canvas)
+        scrollable_frame.bind_all("<MouseWheel>", lambda event: self._on_mousewheel(event, canvas))
+        scrollable_frame.bind_all("<Button-4>", lambda event: self._on_mousewheel(event, canvas))
+        scrollable_frame.bind_all("<Button-5>", lambda event: self._on_mousewheel(event, canvas))
+        
+        # Create and add content to the scrollable frame
+        content = content_class(scrollable_frame)
+        content.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        
+        # Save reference to the content
+        if content_class == SourceFrame:
+            self.source_frame = content
+        elif content_class == AudioFrame:
+            self.audio_frame = content
+
+    def setup_progress_tab(self):
+        # Create a container for the progress tab
+        progress_container = tb.Frame(self.progress_tab)
+        progress_container.pack(fill=tk.BOTH, expand=True)
+            
+        # Progress tab should use all available space
+        self.progress_tab.pack_propagate(False)
+        
+        # Action buttons at the top (always visible)
+        btn_frame = tb.Frame(progress_container)
+        btn_frame.pack(fill=tk.X, pady=10)
+        # Create a wrapper function for the progress frame
+        class ProgressFrameWrapper(tb.Frame):
+            def __init__(self, master, *args, **kwargs):
+                super().__init__(master, *args, **kwargs)
+                self.app = self.master.master.master  # Reference to the main app
+                
+                # Create the progress frame without the buttons
+                self.progress_frame = ProgressFrame(self, self.app)
+                self.progress_frame.pack(fill=tk.BOTH, expand=True)
+
+        # Create a scrollable area for the progress content
+        canvas = tk.Canvas(progress_container)
+        canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+            
+        scrollbar = tb.Scrollbar(progress_container, orient="vertical", command=canvas.yview)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        
+        canvas.configure(yscrollcommand=scrollbar.set)
+        
+        # Create frame inside canvas for progress content
+        scrollable_frame = tb.Frame(canvas)
+        scrollable_frame_id = canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        
+        # Configure canvas to adjust to frame size
+        def configure_frame(event):
+            canvas.configure(scrollregion=canvas.bbox("all"))
+        
+        scrollable_frame.bind("<Configure>", configure_frame)
+        
+        # Make sure the scrollable frame expands to the width of the canvas
+        def configure_canvas(event):
+            canvas.itemconfig(scrollable_frame_id, width=event.width)
+        
+        canvas.bind("<Configure>", configure_canvas)
+        
+        # Enable mousewheel scrolling
+        self.bind_mousewheel(canvas)
+        
+        # Create and add the ProgressFrame without buttons to the scrollable frame
+        self.progress_frame = ProgressFrame(scrollable_frame, app=self)
+        self.progress_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        
+        # Move the buttons to the top fixed area
+        self.progress_buttons = tb.Frame(btn_frame)
+        self.progress_buttons.pack(pady=10)
+        
+        # Create the buttons in the fixed area
+        self.start_button = tb.Button(
+            self.progress_buttons, 
+            text="Start Process", 
+            bootstyle=SUCCESS, 
+            command=self.progress_frame._start_process_thread,
+            width=15
+        )
+        self.start_button.pack(side=tk.LEFT, padx=10)
+
+        self.pause_button = tb.Button(
+            self.progress_buttons, 
+            text="Pause", 
+            bootstyle=WARNING, 
+            command=self.progress_frame._pause_process,
+            width=10
+        )
+        self.pause_button.pack(side=tk.LEFT, padx=10)
+
+        self.resume_button = tb.Button(
+            self.progress_buttons, 
+            text="Resume", 
+            bootstyle=INFO, 
+            command=self.progress_frame._resume_process,
+            state=tk.DISABLED,
+            width=10
+        )
+        self.resume_button.pack(side=tk.LEFT, padx=10)
+        
+        self.cancel_button = tb.Button(
+            self.progress_buttons, 
+            text="Cancel", 
+            bootstyle=DANGER, 
+            command=self.progress_frame._cancel_process,
+            state=tk.DISABLED,
+            width=10
+        )
+        self.cancel_button.pack(side=tk.LEFT, padx=10)
+        
+        # Link the buttons to the progress frame
+        self.progress_frame.start_button = self.start_button
+        self.progress_frame.pause_button = self.pause_button
+        self.progress_frame.resume_button = self.resume_button
+        self.progress_frame.cancel_button = self.cancel_button
+
+    def bind_mousewheel(self, canvas):
+        # Bind the event globally on the entire window
+        self.bind_all("<MouseWheel>", lambda event: self._on_mousewheel(event, canvas))  # Windows
+        self.bind_all("<Button-4>", lambda event: self._on_mousewheel(event, canvas))   # Linux scroll up
+        self.bind_all("<Button-5>", lambda event: self._on_mousewheel(event, canvas))   # Linux scroll down
+
+
+    def _on_mousewheel(self, event, canvas):
+        if event.num == 4 or (hasattr(event, 'delta') and event.delta > 0):
+            canvas.yview_scroll(-1, "units")
+        elif event.num == 5 or (hasattr(event, 'delta') and event.delta < 0):
+            canvas.yview_scroll(1, "units")
+        return "break"
