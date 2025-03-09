@@ -39,3 +39,6 @@ models/**
 Kokoro/*.wav
 *.wav
 test_text.txt
+
+test_input_kokoro
+test_output_kokoro

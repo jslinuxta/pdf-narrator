@@ -267,7 +267,7 @@ class SourceFrame(tb.Frame):
 
 class AudioFrame(tb.Frame):
     """
-    Frame for Kokoro model and voicepack selection + audiobook settings.
+    Frame for Kokoro voicepack selection + audiobook settings.
     """
     def __init__(self, master, *args, **kwargs):
         super().__init__(master, *args, **kwargs)
@@ -275,8 +275,7 @@ class AudioFrame(tb.Frame):
         # Variables
         self.project_dir = os.path.dirname(os.path.abspath(__file__))  # Project directory
 
-        # Default Kokoro model checkpoint
-        self.model_path = tk.StringVar(value="models/kokoro-v0_19.pth")
+        # Remove model_path variable
         # Default voicepack (adjust if you like a different default)
         self.voicepack_path = tk.StringVar(value="voices/am_liam.pt")
 
@@ -294,19 +293,7 @@ class AudioFrame(tb.Frame):
         )
         audio_label.pack(pady=10)
 
-        # Model Selection
-        model_frame = tb.Frame(self)
-        model_frame.pack(fill=X, pady=5, padx=5)
-
-        tb.Label(model_frame, text="Kokoro Model:").pack(side=LEFT, padx=5)
-        models = self._get_pth_files()  # We'll scan for .pth
-        model_combo = tb.Combobox(
-            model_frame, 
-            textvariable=self.model_path, 
-            values=models, 
-            state="readonly"
-        )
-        model_combo.pack(side=LEFT, fill=X, expand=True, padx=5)
+        # Remove Model Selection frame
 
         # Voicepack Selection
         voicepack_frame = tb.Frame(self)
@@ -358,21 +345,7 @@ class AudioFrame(tb.Frame):
         tb.Radiobutton(device_frame, text="GPU (CUDA)", variable=self.device, value="cuda").pack(side=LEFT, padx=5)
         tb.Radiobutton(device_frame, text="CPU", variable=self.device, value="cpu").pack(side=LEFT, padx=5)
 
-    def _get_pth_files(self):
-        """
-        Scan the 'models' directory in the project root for .pth files (Kokoro).
-        Returns a list of relative paths to the found models.
-        """
-        models_dir = os.path.join(self.project_dir, "models")
-        model_files = []
-
-        for root, dirs, files in os.walk(models_dir):
-            for file in files:
-                if file.endswith(".pth"):
-                    relative_path = os.path.relpath(os.path.join(root, file), self.project_dir)
-                    model_files.append(relative_path)
-
-        return model_files
+    # Remove _get_pth_files method since we don't need it anymore
 
     def _get_pt_files(self):
         """
@@ -407,12 +380,7 @@ class AudioFrame(tb.Frame):
     def get_audio_output_dir(self):
         return self.audio_output_dir.get()
 
-    def get_model_path(self):
-        """
-        Returns the absolute path to the Kokoro .pth model file
-        """
-        selected_model = self.model_path.get()
-        return os.path.join(self.project_dir, selected_model) if selected_model else ""
+    # Remove get_model_path method
 
     def get_voicepack_path(self):
         """
@@ -426,7 +394,6 @@ class AudioFrame(tb.Frame):
 
     def get_audio_format(self):
         return self.audio_format.get()
-
 
 class ProgressFrame(tb.Frame):
     """
@@ -536,7 +503,7 @@ class ProgressFrame(tb.Frame):
             extracted_root = self.app.source_frame.get_extracted_text_dir()  # Base for extracted output
             manual_extracted_dir = self.app.source_frame.get_manual_extracted_dir()
 
-            model_path = self.app.audio_frame.get_model_path()
+            # Remove model_path reference
             # Extract the voice identifier from the selected voicepack path.
             voicepack_path = self.app.audio_frame.get_voicepack_path()
             # For example, "Kokoro/voices/af_sarah.pt" becomes "af_sarah"
@@ -862,9 +829,8 @@ class AudiobookApp(tb.Window):
                     if book_name:
                         self.update_audio_output_dir(book_name)
 
-                    # Load audio settings
-                    self.audio_frame.model_path.set(config.get("model_path", "models/kokoro-v0_19.pth"))
-                    self.audio_frame.voicepack_path.set(config.get("voicepack_path", "Kokoro/voices/am_liam.pt"))
+                    # Load audio settings - remove model_path
+                    self.audio_frame.voicepack_path.set(config.get("voicepack_path", "voices/am_liam.pt"))
                     self.audio_frame.chunk_size.set(config.get("chunk_size", 510))
                     self.audio_frame.audio_format.set(config.get("audio_format", ".wav"))
 
@@ -879,7 +845,6 @@ class AudiobookApp(tb.Window):
             except Exception as e:
                 print(f"Failed to load config: {e}")
 
-
     def save_config(self):
         config = {
             "source_option": self.source_frame.get_source_option(),  # Save selected mode
@@ -887,7 +852,7 @@ class AudiobookApp(tb.Window):
             "pdf_folder": self.source_frame.get_pdf_folder(),
             "manual_extracted_dir": self.source_frame.get_manual_extracted_dir(),
             "extracted_text_dir": self.source_frame.get_extracted_text_dir(),  # Save extracted text directory
-            "model_path": self.audio_frame.get_model_path(),
+            # Remove model_path
             "voicepack_path": self.audio_frame.get_voicepack_path(),
             "chunk_size": self.audio_frame.get_chunk_size(),
             "audio_format": self.audio_frame.get_audio_format(),
@@ -898,7 +863,6 @@ class AudiobookApp(tb.Window):
                 json.dump(config, f, indent=4)
         except Exception as e:
             print(f"Failed to save config: {e}")
-
 
     def update_audio_output_dir(self, book_name):
         self.audio_frame.update_audio_output_dir(book_name)
