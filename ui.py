@@ -14,7 +14,21 @@ import sys
 import threading
 import time
 import json
-
+def available_voices():
+        """Return the same hard-coded list of available voices."""
+        return [
+            "af_heart", "af_alloy", "af_aoede", "af_bella", "af_jessica", "af_kore", "af_nicole", "af_nova", "af_river", "af_sarah", "af_sky",
+            "am_adam", "am_echo", "am_eric", "am_fenrir", "am_liam", "am_michael", "am_onyx", "am_puck", "am_santa",
+            "bf_alice", "bf_emma", "bf_isabella", "bf_lily",
+            "bm_daniel", "bm_fable", "bm_george", "bm_lewis",
+            "jf_alpha", "jf_gongitsune", "jf_nezumi", "jf_tebukuro", "jm_kumo",
+            "zf_xiaobei", "zf_xiaoni", "zf_xiaoxiao", "zf_xiaoyi", "zm_yunjian", "zm_yunxi", "zm_yunxia", "zm_yunyang",
+            "ef_dora", "em_alex", "em_santa",
+            "ff_siwis",
+            "hf_alpha", "hf_beta", "hm_omega", "hm_psi",
+            "if_sara", "im_nicola",
+            "pf_dora", "pm_alex", "pm_santa"
+        ]
 class LogRedirector:
     def __init__(self, write_callback):
         self.write_callback = write_callback
@@ -261,42 +275,42 @@ class SourceFrame(tb.Frame):
 
 class AudioFrame(tb.Frame):
     """
-    Frame for Kokoro voicepack selection + audiobook settings.
+    Frame for Kokoro voice selection + audiobook settings.
     """
     def __init__(self, master, *args, **kwargs):
         super().__init__(master, *args, **kwargs)
         
-        # Variables (keep your existing variables)
+        # Variables
         self.project_dir = os.path.dirname(os.path.abspath(__file__))
-        self.voicepack_path = tk.StringVar(value="voices/am_liam.pt")
+        # Set default voice to "am_liam" (no longer a file path)
+        self.voicepack = tk.StringVar(value="am_liam")
         self.chunk_size = tk.IntVar(value=510)
         self.audio_format = tk.StringVar(value=".wav")
         self.audio_output_dir = tk.StringVar()
         self.device = tk.StringVar(value="cuda")
 
-
-        # Voicepack Selection with better grouping
+        # Voice Selection with better grouping
         voicepack_frame = tb.Labelframe(self, text="Voice Selection", padding=10)
         voicepack_frame.pack(fill=tk.X, pady=10, padx=10)
 
         voice_row = tb.Frame(voicepack_frame)
         voice_row.pack(fill=tk.X, pady=5)
         
-        tb.Label(voice_row, text="Voicepack (.pt):").pack(side=tk.LEFT, padx=5)
-        voicepacks = self._get_pt_files()
+        tb.Label(voice_row, text="Voice:").pack(side=tk.LEFT, padx=5)
+        # Use the available voices list instead of scanning .pt files
+        voice_list = available_voices()
         voicepack_combo = tb.Combobox(
             voice_row,
-            textvariable=self.voicepack_path,
-            values=voicepacks,
+            textvariable=self.voicepack,
+            values=voice_list,
             state="readonly",
             width=30
         )
         voicepack_combo.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=5)
+        # If there are voices, select the first one by default
+        if voice_list:
+            voicepack_combo.current(0)
         
-        # Add a Test Voice button
-        test_button = tb.Button(voice_row, text="Test Voice", bootstyle="info", command=self._test_voice)
-        test_button.pack(side=tk.LEFT, padx=5)
-
         # Separator
         tb.Separator(self, orient='horizontal').pack(fill=tk.X, pady=15, padx=10)
 
@@ -356,6 +370,11 @@ class AudioFrame(tb.Frame):
         tb.Label(output_frame, text="Audiobook Output Folder:").pack(anchor=tk.W, padx=5, pady=5)
         tb.Entry(output_frame, textvariable=self.audio_output_dir, state=READONLY).pack(fill=tk.X, expand=True, padx=5, pady=5)
 
+    def get_voicepack(self):
+        """
+        Returns the selected voice name (no longer a file path).
+        """
+        return self.voicepack.get()
     # Add new methods for the enhanced functionality
     def _update_chunk_size(self, event):
         """Update chunk size based on combobox selection"""
@@ -375,30 +394,6 @@ class AudioFrame(tb.Frame):
         elif "mp3" in selection:
             self.audio_format.set(".mp3")
 
-    def _test_voice(self):
-        """Play a test sample of the selected voice"""
-        selected_voice = self.voicepack_path.get()
-        if not selected_voice:
-            tk.messagebox.showinfo("Test Voice", "Please select a voice first.")
-            return
-            
-        try:
-            # Show a dialog indicating that voice test is in progress
-            tk.messagebox.showinfo("Test Voice", 
-                               f"Testing voice: {os.path.basename(selected_voice)}\n"
-                               f"A short sample will be generated and played.")
-            
-            # Here you would add code to generate and play a short sample
-            # This would depend on how your Kokoro voice generation works
-            # For example:
-            # generate_test_sample(self.get_voicepack_path(), "This is a test of the selected voice.")
-            
-            # Since we can't implement the actual test without the generate_audiobook_kokoro code,
-            # we'll just show a placeholder message
-            tk.messagebox.showinfo("Voice Test", "Voice test feature will be implemented in a future update.")
-            
-        except Exception as e:
-            tk.messagebox.showerror("Voice Test Failed", f"Could not test voice: {str(e)}")
 
     def get_device(self):
         return self.device.get()
@@ -417,27 +412,11 @@ class AudioFrame(tb.Frame):
     def get_audio_output_dir(self):
         return self.audio_output_dir.get()
 
-    # Remove get_model_path method
-    def _get_pt_files(self):
-        """
-        Scan the 'voices' directory for .pt voicepacks (Kokoro).
-        Returns a list of relative paths to the found voicepacks.
-        """
-        voices_dir = os.path.join(self.project_dir, "voices/")
-        voice_files = []
-
-        for root, dirs, files in os.walk(voices_dir):
-            for file in files:
-                if file.endswith(".pt"):
-                    relative_path = os.path.relpath(os.path.join(root, file), self.project_dir)
-                    voice_files.append(relative_path)
-
-        return voice_files
-    def get_voicepack_path(self):
+    def get_voicepack(self):
         """
         Returns the absolute path to the Kokoro .pt voicepack file
         """
-        selected_vp = self.voicepack_path.get()
+        selected_vp = self.voicepack.get()
         return os.path.join(self.project_dir, selected_vp) if selected_vp else ""
 
     def get_chunk_size(self):
@@ -590,9 +569,9 @@ class ProgressFrame(tb.Frame):
 
             # Remove model_path reference
             # Extract the voice identifier from the selected voicepack path.
-            voicepack_path = self.app.audio_frame.get_voicepack_path()
+            voicepack = self.app.audio_frame.get_voicepack()
             # For example, "Kokoro/voices/af_sarah.pt" becomes "af_sarah"
-            voice = os.path.splitext(os.path.basename(voicepack_path))[0]
+            voice = os.path.splitext(os.path.basename(voicepack))[0]
             chunk_size = self.app.audio_frame.get_chunk_size()
             audio_format = self.app.audio_frame.get_audio_format()
             audio_root = self.app.audio_frame.get_audio_output_dir()
@@ -897,7 +876,6 @@ class AudiobookApp(tb.Window):
             command=self._reset_config
         )
         reset_button.pack(side=tk.RIGHT, padx=10)
-        self.voice_test_tab = tb.Frame(self.notebook)
 
         self.load_config()
     def _reset_config(self):
@@ -913,7 +891,7 @@ class AudiobookApp(tb.Window):
             self.source_frame.extract_mode.set("chapters")
             
             # Reset audio settings
-            self.audio_frame.voicepack_path.set("voices/am_liam.pt") 
+            self.audio_frame.voicepack.set("voices/am_liam.pt") 
             self.audio_frame.chunk_size.set(510)
             self.audio_frame.audio_format.set(".wav")
             self.audio_frame.device.set("cuda")
@@ -989,7 +967,7 @@ class AudiobookApp(tb.Window):
                         self.update_audio_output_dir(book_name)
 
                     # Load audio settings - remove model_path
-                    self.audio_frame.voicepack_path.set(config.get("voicepack_path", "voices/am_liam.pt"))
+                    self.audio_frame.voicepack.set(config.get("voicepack", "voices/am_liam.pt"))
                     self.audio_frame.chunk_size.set(config.get("chunk_size", 510))
                     self.audio_frame.audio_format.set(config.get("audio_format", ".wav"))
 
@@ -1012,7 +990,7 @@ class AudiobookApp(tb.Window):
             "manual_extracted_dir": self.source_frame.get_manual_extracted_dir(),
             "extracted_text_dir": self.source_frame.get_extracted_text_dir(),  # Save extracted text directory
             # Remove model_path
-            "voicepack_path": self.audio_frame.get_voicepack_path(),
+            "voicepack": self.audio_frame.get_voicepack(),
             "chunk_size": self.audio_frame.get_chunk_size(),
             "audio_format": self.audio_frame.get_audio_format(),
             "theme": self.selected_theme,
@@ -1204,17 +1182,15 @@ class VoiceTestFrame(tb.Frame):
     def __init__(self, master, *args, **kwargs):
         super().__init__(master, *args, **kwargs)
         
-        # Variables
         self.project_dir = os.path.dirname(os.path.abspath(__file__))
         self.test_text = tk.StringVar(value="This is a sample text to test how the voice sounds. You can modify this text to hear different words and expressions.")
         self.test_mode = tk.StringVar(value="single")
         self.selected_voice = tk.StringVar()
         self.test_output_dir = tk.StringVar(value=os.path.join(self.project_dir, "voice_tests"))
         
-        # Create test output directory if it doesn't exist
         os.makedirs(self.test_output_dir.get(), exist_ok=True)
         
-        # Test Mode Selection
+        # Test Mode Selection remains unchanged...
         mode_frame = tb.Labelframe(self, text="Test Mode", padding=10)
         mode_frame.pack(fill=tk.X, pady=10, padx=10)
         
@@ -1226,7 +1202,6 @@ class VoiceTestFrame(tb.Frame):
             command=self._update_ui,
             padding=5
         ).pack(anchor=tk.W, padx=10, pady=5)
-        
         tb.Radiobutton(
             mode_frame, 
             text="Test All Available Voices", 
@@ -1235,16 +1210,15 @@ class VoiceTestFrame(tb.Frame):
             command=self._update_ui,
             padding=5
         ).pack(anchor=tk.W, padx=10, pady=5)
-        
+        self.voice_container = tb.Frame(self)
+        self.voice_container.pack(fill=tk.X, pady=10, padx=10)
         # Voice Selection (for single voice mode)
-        self.voice_frame = tb.Labelframe(self, text="Voice Selection", padding=10)
-        self.voice_frame.pack(fill=tk.X, pady=10, padx=10)
-        
+        self.voice_frame = tb.Labelframe(self.voice_container, text="Voice Selection", padding=10)
+        self.voice_frame.pack(fill=tk.X)
         voice_row = tb.Frame(self.voice_frame)
         voice_row.pack(fill=tk.X, pady=5)
-        
         tb.Label(voice_row, text="Select Voice:").pack(side=tk.LEFT, padx=5)
-        voicepacks = self._get_pt_files()
+        voicepacks = available_voices()
         voice_combo = tb.Combobox(
             voice_row,
             textvariable=self.selected_voice,
@@ -1253,8 +1227,6 @@ class VoiceTestFrame(tb.Frame):
             width=30
         )
         voice_combo.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=5)
-        
-        # If there are voices, select the first one by default
         if voicepacks:
             voice_combo.current(0)
         
@@ -1328,21 +1300,6 @@ class VoiceTestFrame(tb.Frame):
         else:
             self.voice_frame.pack_forget()
     
-    def _get_pt_files(self):
-        """
-        Scan the 'voices' directory for .pt voicepacks (Kokoro).
-        Returns a list of relative paths to the found voicepacks.
-        """
-        voices_dir = os.path.join(self.project_dir, "voices/")
-        voice_files = []
-
-        for root, dirs, files in os.walk(voices_dir):
-            for file in files:
-                if file.endswith(".pt"):
-                    relative_path = os.path.relpath(os.path.join(root, file), self.project_dir)
-                    voice_files.append(relative_path)
-
-        return voice_files
     
     def _open_output_folder(self):
         """Open the voice test output folder"""
@@ -1426,16 +1383,13 @@ class VoiceTestFrame(tb.Frame):
                     speed=1,
                     split_pattern=r'\n+',
                     cancellation_flag=lambda: self.cancellation_flag,
-                    progress_callback=None,
+                    progress_callback=lambda progress, duration: self.progress_var.set(progress),
                     pause_event=None
                 )
                 self.progress_var.set(100)
             else:
                 # For testing all available voices, use the new function
-                voices = []
-                for voice_path in self._get_pt_files():
-                    voice_name = os.path.splitext(os.path.basename(voice_path))[0]
-                    voices.append(voice_name)
+                voices = available_voices()
                 total_voices = len(voices)
                 self.status_label.config(text=f"Testing all {total_voices} voices")
 
@@ -1447,7 +1401,7 @@ class VoiceTestFrame(tb.Frame):
                     speed=1,
                     split_pattern=r'\n+',
                     cancellation_flag=lambda: self.cancellation_flag,
-                    progress_callback=lambda progress: self.progress_var.set(progress),
+                    progress_callback=lambda progress, duration: self.progress_var.set(progress),
                     pause_event=None
                 )
                 # When done, set progress to 100%
@@ -1476,291 +1430,4 @@ class VoiceTestFrame(tb.Frame):
                         child.configure(state=DISABLED)
                     elif isinstance(child, tb.Button) and child['text'] == "Run Voice Test":
                         child.configure(state=NORMAL)
-    """
-    Frame for testing TTS voices with sample text.
-    """
-    def __init__(self, master, *args, **kwargs):
-        super().__init__(master, *args, **kwargs)
-        
-        # Variables
-        self.project_dir = os.path.dirname(os.path.abspath(__file__))
-        self.test_text = tk.StringVar(value="This is a sample text to test how the voice sounds. You can modify this text to hear different words and expressions.")
-        self.test_mode = tk.StringVar(value="single")
-        self.selected_voice = tk.StringVar()
-        self.test_output_dir = tk.StringVar(value=os.path.join(self.project_dir, "voice_tests"))
-        
-        # Create test output directory if it doesn't exist
-        os.makedirs(self.test_output_dir.get(), exist_ok=True)
-        
-        # Test Mode Selection
-        mode_frame = tb.Labelframe(self, text="Test Mode", padding=10)
-        mode_frame.pack(fill=tk.X, pady=10, padx=10)
-        
-        tb.Radiobutton(
-            mode_frame, 
-            text="Test Single Voice", 
-            variable=self.test_mode, 
-            value="single",
-            command=self._update_ui,
-            padding=5
-        ).pack(anchor=tk.W, padx=10, pady=5)
-        
-        tb.Radiobutton(
-            mode_frame, 
-            text="Test All Available Voices", 
-            variable=self.test_mode, 
-            value="all",
-            command=self._update_ui,
-            padding=5
-        ).pack(anchor=tk.W, padx=10, pady=5)
-        
-        # Voice Selection (for single voice mode)
-        self.voice_frame = tb.Labelframe(self, text="Voice Selection", padding=10)
-        self.voice_frame.pack(fill=tk.X, pady=10, padx=10)
-        
-        voice_row = tb.Frame(self.voice_frame)
-        voice_row.pack(fill=tk.X, pady=5)
-        
-        tb.Label(voice_row, text="Select Voice:").pack(side=tk.LEFT, padx=5)
-        voicepacks = self._get_pt_files()
-        voice_combo = tb.Combobox(
-            voice_row,
-            textvariable=self.selected_voice,
-            values=voicepacks,
-            state="readonly",
-            width=30
-        )
-        voice_combo.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=5)
-        
-        # If there are voices, select the first one by default
-        if voicepacks:
-            voice_combo.current(0)
-        
-        # Sample Text Input
-        text_frame = tb.Labelframe(self, text="Sample Text", padding=10)
-        text_frame.pack(fill=tk.X, pady=10, padx=10)
-        
-        self.text_input = scrolledtext.ScrolledText(text_frame, height=5, wrap=tk.WORD)
-        self.text_input.pack(fill=tk.X, pady=5, padx=5)
-        self.text_input.insert(tk.END, self.test_text.get())
-        
-        # Output directory frame
-        output_frame = tb.Labelframe(self, text="Output Location", padding=10)
-        output_frame.pack(fill=tk.X, pady=10, padx=10)
-        
-        output_row = tb.Frame(output_frame)
-        output_row.pack(fill=tk.X, pady=5)
-        
-        tb.Label(output_row, text="Test Outputs:").pack(side=tk.LEFT, padx=5)
-        tb.Entry(output_row, textvariable=self.test_output_dir, state=READONLY).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=5)
-        tb.Button(output_row, text="Open Folder", command=self._open_output_folder).pack(side=tk.LEFT, padx=5)
-        
-        # Button to run the test
-        buttons_frame = tb.Frame(self)
-        buttons_frame.pack(fill=tk.X, pady=20, padx=10)
-        
-        tb.Button(
-            buttons_frame, 
-            text="Run Voice Test", 
-            bootstyle=SUCCESS,
-            command=self._run_test,
-            width=20
-        ).pack(side=tk.LEFT, padx=10)
-        
-        tb.Button(
-            buttons_frame, 
-            text="Stop Test", 
-            bootstyle=DANGER,
-            command=self._stop_test,
-            width=15,
-            state=DISABLED
-        ).pack(side=tk.LEFT, padx=10)
-        
-        # Status label
-        self.status_label = tb.Label(buttons_frame, text="Ready to test voices")
-        self.status_label.pack(side=tk.RIGHT, padx=10)
-        
-        # Progress bar for tests
-        progress_frame = tb.Frame(self)
-        progress_frame.pack(fill=tk.X, pady=10, padx=20)
-        
-        self.progress_var = tk.DoubleVar(value=0.0)
-        self.progressbar = tb.Progressbar(progress_frame, variable=self.progress_var, maximum=100)
-        self.progressbar.pack(fill=tk.X, pady=5)
-        
-        # Label to show current progress (e.g., "Testing voice 3/25: am_liam")
-        self.progress_label = tb.Label(progress_frame, text="")
-        self.progress_label.pack(pady=5)
-        
-        # Initialize test thread and cancellation flag
-        self.test_thread = None
-        self.cancellation_flag = False
-        
-        # Update UI based on initial mode
-        self._update_ui()
     
-    def _update_ui(self):
-        """Update UI based on selected test mode"""
-        if self.test_mode.get() == "single":
-            self.voice_frame.pack(fill=tk.X, pady=10, padx=10)
-        else:
-            self.voice_frame.pack_forget()
-    
-    def _get_pt_files(self):
-        """
-        Scan the 'voices' directory for .pt voicepacks (Kokoro).
-        Returns a list of relative paths to the found voicepacks.
-        """
-        voices_dir = os.path.join(self.project_dir, "voices/")
-        voice_files = []
-
-        for root, dirs, files in os.walk(voices_dir):
-            for file in files:
-                if file.endswith(".pt"):
-                    relative_path = os.path.relpath(os.path.join(root, file), self.project_dir)
-                    voice_files.append(relative_path)
-
-        return voice_files
-    
-    def _open_output_folder(self):
-        """Open the voice test output folder"""
-        output_dir = self.test_output_dir.get()
-        if output_dir and os.path.isdir(output_dir):
-            try:
-                if os.name == 'nt':  # Windows
-                    os.startfile(output_dir)
-                elif os.name == 'posix':  # macOS or Linux
-                    import subprocess
-                    subprocess.Popen(['xdg-open', output_dir])
-            except Exception as e:
-                tk.messagebox.showerror("Error", f"Could not open folder: {str(e)}")
-        else:
-            tk.messagebox.showwarning("Warning", "No valid output directory.")
-    
-    def _run_test(self):
-        """Run the voice test in a separate thread"""
-        if self.test_thread and self.test_thread.is_alive():
-            tk.messagebox.showinfo("Test in Progress", "A voice test is already running.")
-            return
-        
-        # Get the latest text from the text widget
-        test_text = self.text_input.get("1.0", tk.END).strip()
-        if not test_text:
-            tk.messagebox.showwarning("Warning", "Please enter some text to test.")
-            return
-        
-        # Reset cancellation flag
-        self.cancellation_flag = False
-        
-        # Create the test thread
-        self.test_thread = threading.Thread(
-            target=self._run_test_thread,
-            args=(test_text,),
-            daemon=True
-        )
-        
-        # Update UI
-        for widget in self.winfo_children():
-            for child in widget.winfo_children():
-                if isinstance(child, tb.Button) and child['text'] == "Stop Test":
-                    child.configure(state=NORMAL)
-                elif isinstance(child, tb.Button) and child['text'] == "Run Voice Test":
-                    child.configure(state=DISABLED)
-        
-        # Start the thread
-        self.test_thread.start()
-    
-    def _stop_test(self):
-        """Stop the currently running test"""
-        if self.test_thread and self.test_thread.is_alive():
-            self.cancellation_flag = True
-            self.status_label.config(text="Stopping test...")
-        else:
-            tk.messagebox.showinfo("No Test Running", "There is no voice test currently running.")
-    
-    def _run_test_thread(self, test_text):
-        """Run the voice test in a background thread"""
-        try:
-            # Create a temporary text file for the test
-            test_dir = os.path.join(self.project_dir, "voice_test_temp")
-            os.makedirs(test_dir, exist_ok=True)
-            
-            test_file = os.path.join(test_dir, "test_text.txt")
-            with open(test_file, "w", encoding="utf-8") as f:
-                f.write(test_text)
-            
-            # Initialize KPipeline
-            from kokoro import KPipeline
-            pipeline = KPipeline(lang_code="a")  # Default language code
-            
-            # Determine which voices to test
-            if self.test_mode.get() == "single":
-                voices = [os.path.splitext(os.path.basename(self.selected_voice.get()))[0]]
-                self.status_label.config(text=f"Testing voice: {voices[0]}")
-            else:
-                # Get all available voices
-                voices = []
-                for voice_path in self._get_pt_files():
-                    voice_name = os.path.splitext(os.path.basename(voice_path))[0]
-                    voices.append(voice_name)
-                self.status_label.config(text=f"Testing all {len(voices)} voices")
-            
-            # Update progress bar max value
-            total_voices = len(voices)
-            
-            # Loop through each voice and generate audio
-            for i, voice in enumerate(voices, 1):
-                if self.cancellation_flag:
-                    self.status_label.config(text="Test stopped by user")
-                    break
-                
-                # Update UI
-                self.progress_label.config(text=f"Testing voice {i}/{total_voices}: {voice}")
-                self.progress_var.set((i-1) / total_voices * 100)
-                
-                # Generate the audio
-                from generate_audiobook_kokoro import generate_audio_for_file_kokoro
-                
-                output_file = os.path.join(self.test_output_dir.get(), f"test_{voice}.wav")
-                
-                generate_audio_for_file_kokoro(
-                    input_path=test_file,
-                    pipeline=pipeline,
-                    voice=voice,
-                    output_path=output_file,
-                    speed=1,
-                    split_pattern=r'\n+',
-                    cancellation_flag=lambda: self.cancellation_flag,
-                    progress_callback=None,
-                    pause_event=None
-                )
-                
-                # Update progress
-                self.progress_var.set(i / total_voices * 100)
-                
-                # Short delay between voices to avoid resource issues
-                time.sleep(0.5)
-            
-            # Clean up the temporary file
-            if os.path.exists(test_file):
-                os.remove(test_file)
-            
-            if not self.cancellation_flag:
-                self.status_label.config(text="Voice testing completed!")
-            
-            # Open the output folder when done
-            if tk.messagebox.askyesno("Test Complete", "Voice test completed. Open the output folder?"):
-                self._open_output_folder()
-                
-        except Exception as e:
-            import traceback
-            traceback.print_exc()
-            self.status_label.config(text=f"Error: {str(e)}")
-        finally:
-            # Re-enable the Run button and disable the Stop button
-            for widget in self.winfo_children():
-                for child in widget.winfo_children():
-                    if isinstance(child, tb.Button) and child['text'] == "Stop Test":
-                        child.configure(state=DISABLED)
-                    elif isinstance(child, tb.Button) and child['text'] == "Run Voice Test":
-                        child.configure(state=NORMAL)

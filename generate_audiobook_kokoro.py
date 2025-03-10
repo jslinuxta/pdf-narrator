@@ -179,8 +179,6 @@ def generate_audio_for_all_voices_kokoro(
     Generate audio samples for all specified voices from the input text file.
     This function loops over each voice, generating an audio file in the output directory.
     """
-    import os
-    from kokoro import KPipeline
 
     # Ensure output directory exists
     os.makedirs(output_dir, exist_ok=True)
@@ -208,6 +206,9 @@ def generate_audio_for_all_voices_kokoro(
         )
         # Optionally update progress based on voice count
         if progress_callback:
-            progress_callback((i / total_voices) * 100)
-            
+            progress_callback((i / total_voices) * 100, 0)
+                    
     print("Completed audio generation for all voices.")
+
+
+# TODO: add a function for single voice test generation, since we need pipeline defined and ui does not define it
