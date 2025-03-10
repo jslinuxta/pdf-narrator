@@ -163,3 +163,51 @@ def generate_audiobooks_kokoro(
         generated_files.append(output_path)
 
     return generated_files
+
+def generate_audio_for_all_voices_kokoro(
+    input_path,
+    lang_code,
+    voices,
+    output_dir,
+    speed=1,
+    split_pattern=r'\n+',
+    cancellation_flag=lambda: False,
+    progress_callback=None,
+    pause_event=None
+):
+    """
+    Generate audio samples for all specified voices from the input text file.
+    This function loops over each voice, generating an audio file in the output directory.
+    """
+    import os
+    from kokoro import KPipeline
+
+    # Ensure output directory exists
+    os.makedirs(output_dir, exist_ok=True)
+    
+    # Initialize pipeline only once
+    pipeline = KPipeline(lang_code=lang_code)
+    
+    total_voices = len(voices)
+    for i, voice in enumerate(voices, start=1):
+        print(f"Generating audio for voice: {voice} ({i}/{total_voices})")
+        # Define output file for this voice
+        output_file = os.path.join(output_dir, f"test_{voice}.wav")
+        
+        # Generate audio for this voice using your existing function
+        generate_audio_for_file_kokoro(
+            input_path=input_path,
+            pipeline=pipeline,
+            voice=voice,
+            output_path=output_file,
+            speed=speed,
+            split_pattern=split_pattern,
+            cancellation_flag=cancellation_flag,
+            progress_callback=progress_callback,
+            pause_event=pause_event
+        )
+        # Optionally update progress based on voice count
+        if progress_callback:
+            progress_callback((i / total_voices) * 100)
+            
+    print("Completed audio generation for all voices.")

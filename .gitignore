@@ -42,3 +42,10 @@ test_text.txt
 
 test_input_kokoro
 test_output_kokoro
+
+# Ignore voice_tests folder except a .gitkeep file if needed
+voice_tests/*
+!voice_tests/.gitkeep
+
+# Ignore the temporary folder used for voice tests
+voice_test_temp/

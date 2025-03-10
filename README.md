@@ -38,6 +38,10 @@ PDF Narrator (Kokoro Edition) transforms your **PDF and EPUB documents** into au
   - Choose the chunk size for text to accommodate limited GPU resources.
   - Switch to CPU if no GPU is available.
 
+- **Voice Testing Made Simple**
+  - Test a single voice or loop through all available voices directly from the GUI.
+  - Use the dedicated Voice Test tab to generate and listen to sample audio files.
+
 ---
 
 ## Prerequisites
@@ -110,6 +114,31 @@ PDF Narrator (Kokoro Edition) transforms your **PDF and EPUB documents** into au
 
 ---
 
+## Testing Voices
+
+With the latest update, you can now quickly test voices directly within the app:
+
+1. **Navigate to the Voice Test Tab**  
+   In the main window, click on the **Voice Test** tab to access voice testing features.
+
+2. **Enter Sample Text**  
+   Modify or use the default sample text in the provided text area.
+
+3. **Select Test Mode**  
+   - **Test Single Voice:** Pick one voice from the dropdown to generate a sample.
+   - **Test All Available Voices:** Choose this option to automatically generate samples for every available voice.
+
+4. **Run the Test**  
+   Click **Run Voice Test** to start. The app creates a temporary file with your sample text, processes it through Kokoro TTS for each voice (if testing all voices), and saves the output audio files in the designated folder.
+
+5. **Monitor Progress and Listen**  
+   A progress bar and status labels keep you updated. Once the test is complete, you’ll be prompted to open the output folder where you can listen to the generated samples.
+
+6. **Stop the Test if Needed**  
+   If you need to cancel while testing, click **Stop Test** to interrupt the process.
+
+---
+
 ## Technical Highlights
 
 - **Text Extraction**
@@ -135,4 +164,4 @@ This project is released under the MIT License (LICENSE.md).
 
 ---
 
-Enjoy converting your PDFs and EPUBs into immersive audiobooks with Kokoro v1.0 TTS!
+Enjoy converting your PDFs and EPUBs into immersive audiobooks with Kokoro v1.0 TTS—and now, easily test voices to pick your perfect sound!
