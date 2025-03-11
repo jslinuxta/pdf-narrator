@@ -55,7 +55,7 @@ class SourceFrame(tb.Frame):
     def __init__(self, master, *args, **kwargs):
         super().__init__(master, *args, **kwargs)
 
-        # Variables (keeping your existing variables)
+        # Variables
         self.project_dir = os.path.dirname(os.path.abspath(__file__))
         self.pdf_path = tk.StringVar()
         self.pdf_folder = tk.StringVar()
@@ -65,73 +65,72 @@ class SourceFrame(tb.Frame):
         self.extract_mode = tk.StringVar(value="chapters")
         self.source_option = tk.StringVar(value="single")  
 
-        # Source option radio buttons with better padding and grouping
-        source_option_frame = tb.Labelframe(self, text="Choose Source Option", padding=10)
-        source_option_frame.pack(fill=tk.X, pady=5, padx=10)
+        # Integrated source selection frame with combined radio buttons and file selection
+        source_selection_frame = tb.Labelframe(self, text="Source Selection", padding=10, bootstyle="info")
+        source_selection_frame.pack(fill=tk.X, pady=5, padx=10)
 
+        # Row 1: Single Book Option
+        single_row = tb.Frame(source_selection_frame)
+        single_row.pack(fill=tk.X, pady=5, padx=5)
+        
         tb.Radiobutton(
-            source_option_frame, 
+            single_row, 
             text="Single Book (PDF/EPUB)", 
             variable=self.source_option, 
             value="single",
             command=self._update_ui,
-            padding=5
-        ).pack(anchor=tk.W, padx=10, pady=5)
+            width=21
+        ).pack(side=tk.LEFT, padx=(0, 10))
+        
+        tb.Label(single_row, text="File:").pack(side=tk.LEFT, padx=(5,20))
+        self.single_entry = tb.Entry(single_row, textvariable=self.pdf_path)
+        self.single_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=5)
+        self.single_browse_btn = tb.Button(single_row, text="Browse", command=self._browse_single_pdf)
+        self.single_browse_btn.pack(side=tk.LEFT, padx=5)
 
+        # Row 2: Batch Books Option
+        batch_row = tb.Frame(source_selection_frame)
+        batch_row.pack(fill=tk.X, pady=5, padx=5)
+        
         tb.Radiobutton(
-            source_option_frame, 
-            text="Batch Books (select folder)", 
+            batch_row, 
+            text="Batch Books", 
             variable=self.source_option, 
             value="batch",
             command=self._update_ui,
-            padding=5
-        ).pack(anchor=tk.W, padx=10, pady=5)
+            width=21
+        ).pack(side=tk.LEFT, padx=(0, 10))
+        
+        tb.Label(batch_row, text="Folder:").pack(side=tk.LEFT, padx=5)
+        self.batch_entry = tb.Entry(batch_row, textvariable=self.pdf_folder)
+        self.batch_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=5)
+        self.batch_browse_btn = tb.Button(batch_row, text="Browse", command=self._browse_pdf_folder)
+        self.batch_browse_btn.pack(side=tk.LEFT, padx=5)
 
+        # Row 3: Skip Extraction Option
+        skip_row = tb.Frame(source_selection_frame)
+        skip_row.pack(fill=tk.X, pady=5, padx=5)
+        
         tb.Radiobutton(
-            source_option_frame, 
-            text="Skip Extraction (use existing text folder)", 
+            skip_row, 
+            text="Use Existing Text", 
             variable=self.source_option, 
             value="skip",
             command=self._update_ui,
-            padding=5
-        ).pack(anchor=tk.W, padx=10, pady=5)
-
-        # Horizontal separator
-        tb.Separator(self, orient='horizontal').pack(fill=tk.X, pady=15, padx=10)
-
-        # File selection frames with improved layout
-        selection_frame = tb.Labelframe(self, text="File Selection", padding=10)
-        selection_frame.pack(fill=tk.X, pady=5, padx=10)
+            width=21
+        ).pack(side=tk.LEFT, padx=(0, 10))
         
-        # Single PDF selection with better spacing
-        self.single_frame = tb.Frame(selection_frame)
-        self.single_frame.pack(pady=10, fill=tk.X)
+        tb.Label(skip_row, text="Folder:").pack(side=tk.LEFT, padx=5)
+        self.skip_entry = tb.Entry(skip_row, textvariable=self.manual_extracted_dir)
+        self.skip_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=5)
+        self.skip_browse_btn = tb.Button(skip_row, text="Browse", command=self._browse_extracted_folder)
+        self.skip_browse_btn.pack(side=tk.LEFT, padx=5)
 
-        tb.Label(self.single_frame, text="Select Book File (PDF/EPUB):").pack(side=tk.LEFT, padx=5)
-        tb.Entry(self.single_frame, textvariable=self.pdf_path, state=tk.NORMAL).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=5)
-        tb.Button(self.single_frame, text="Browse", command=self._browse_single_pdf).pack(side=tk.LEFT, padx=5)
-
-        # Batch PDF folder selection
-        self.batch_frame = tb.Frame(selection_frame)
-        self.batch_frame.pack(pady=10, fill=tk.X)
-
-        tb.Label(self.batch_frame, text="Select Folder (Batch):").pack(side=tk.LEFT, padx=5)
-        tb.Entry(self.batch_frame, textvariable=self.pdf_folder, state=tk.NORMAL).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=5)
-        tb.Button(self.batch_frame, text="Browse", command=self._browse_pdf_folder).pack(side=tk.LEFT, padx=5)
-
-        # Manual extracted folder (skip extraction)
-        self.skip_frame = tb.Frame(selection_frame)
-        self.skip_frame.pack(pady=10, fill=tk.X)
-
-        tb.Label(self.skip_frame, text="Existing Text Folder:").pack(side=tk.LEFT, padx=5)
-        tb.Entry(self.skip_frame, textvariable=self.manual_extracted_dir, state=tk.NORMAL).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=5)
-        tb.Button(self.skip_frame, text="Browse", command=self._browse_extracted_folder).pack(side=tk.LEFT, padx=5)
-
-        # Another separator
+        # Separator
         tb.Separator(self, orient='horizontal').pack(fill=tk.X, pady=15, padx=10)
 
         # TOC & Extraction Mode with better styling
-        options_frame = tb.Labelframe(self, text="Extraction Options (only when extracting)", padding=10)
+        options_frame = tb.Labelframe(self, text="Extraction Options", padding=10)
         options_frame.pack(fill=tk.X, pady=10, padx=10)
 
         toc_check = tb.Checkbutton(options_frame, text="Use TOC (if available)", variable=self.use_toc, padding=5)
@@ -162,19 +161,25 @@ class SourceFrame(tb.Frame):
         """
         option = self.source_option.get()
 
-        # Toggle visibility based on the mode
+        # Disable all entry fields and buttons first
+        for widgets in [
+            (self.single_entry, self.single_browse_btn),
+            (self.batch_entry, self.batch_browse_btn),
+            (self.skip_entry, self.skip_browse_btn)
+        ]:
+            for widget in widgets:
+                widget.configure(state=tk.DISABLED)
+
+        # Enable only the selected option's widgets
         if option == "single":
-            self._toggle_frame(self.single_frame, enable=True)
-            self._toggle_frame(self.batch_frame, enable=False)
-            self._toggle_frame(self.skip_frame, enable=False)
+            self.single_entry.configure(state=tk.NORMAL)
+            self.single_browse_btn.configure(state=tk.NORMAL)
         elif option == "batch":
-            self._toggle_frame(self.single_frame, enable=False)
-            self._toggle_frame(self.batch_frame, enable=True)
-            self._toggle_frame(self.skip_frame, enable=False)
+            self.batch_entry.configure(state=tk.NORMAL)
+            self.batch_browse_btn.configure(state=tk.NORMAL)
         elif option == "skip":
-            self._toggle_frame(self.single_frame, enable=False)
-            self._toggle_frame(self.batch_frame, enable=False)
-            self._toggle_frame(self.skip_frame, enable=True)
+            self.skip_entry.configure(state=tk.NORMAL)
+            self.skip_browse_btn.configure(state=tk.NORMAL)
 
     def _toggle_frame(self, frame, enable=True):
         """
@@ -290,7 +295,7 @@ class AudioFrame(tb.Frame):
         self.device = tk.StringVar(value="cuda")
 
         # Voice Selection with better grouping
-        voicepack_frame = tb.Labelframe(self, text="Voice Selection", padding=10)
+        voicepack_frame = tb.Labelframe(self, text="Voice Selection", padding=10, bootstyle="info")
         voicepack_frame.pack(fill=tk.X, pady=10, padx=10)
 
         voice_row = tb.Frame(voicepack_frame)
@@ -417,7 +422,7 @@ class AudioFrame(tb.Frame):
         Returns the absolute path to the Kokoro .pt voicepack file
         """
         selected_vp = self.voicepack.get()
-        return os.path.join(self.project_dir, selected_vp) if selected_vp else ""
+        return  selected_vp if selected_vp else ""
 
     def get_chunk_size(self):
         return self.chunk_size.get()
@@ -440,73 +445,16 @@ class ProgressFrame(tb.Frame):
         self.extract_progress = tk.DoubleVar(value=0.0)
         self.audio_progress = tk.DoubleVar(value=0.0)
         self.status_text = tk.StringVar(value="Ready to process")
-        self.estimated_time_text = tk.StringVar(value="Estimated time remaining: N/A")
+        self.estimated_time_text = tk.StringVar(value="N/A")
         self.current_file_text = tk.StringVar(value="")
         self.progress_count_text = tk.StringVar(value="")
         self.percentage_text = tk.StringVar(value="0%")
-        
-
-        # Status frame with better organization
-        status_frame = tb.Labelframe(self, text="Current Status", padding=10)
-        status_frame.pack(fill=tk.X, pady=5, padx=10)
-        
-        # Main status
-        status_row = tb.Frame(status_frame)
-        status_row.pack(fill=tk.X, pady=5)
-        tb.Label(status_row, text="Status:", width=10).pack(side=tk.LEFT, padx=5)
-        tb.Label(status_row, textvariable=self.status_text, font="-weight bold").pack(side=tk.LEFT, padx=5)
-        
-        # Current file being processed
-        file_row = tb.Frame(status_frame)
-        file_row.pack(fill=tk.X, pady=5)
-        tb.Label(file_row, text="Current File:", width=10).pack(side=tk.LEFT, padx=5)
-        tb.Label(file_row, textvariable=self.current_file_text).pack(side=tk.LEFT, padx=5)
-        
-        # Progress count (e.g., "Processing file 2 of 15")
-        count_row = tb.Frame(status_frame)
-        count_row.pack(fill=tk.X, pady=5)
-        tb.Label(count_row, text="Progress:", width=10).pack(side=tk.LEFT, padx=5)
-        tb.Label(count_row, textvariable=self.progress_count_text).pack(side=tk.LEFT, padx=5)
-        
-        # Estimated time
-        time_row = tb.Frame(status_frame)
-        time_row.pack(fill=tk.X, pady=5)
-        tb.Label(time_row, text="Time Left:", width=10).pack(side=tk.LEFT, padx=5)
-        tb.Label(time_row, textvariable=self.estimated_time_text).pack(side=tk.LEFT, padx=5)
-
-        # Separator
-        tb.Separator(self, orient='horizontal').pack(fill=tk.X, pady=15, padx=10)
-
-        # Progress Bars with better styling
-        pb_frame = tb.Labelframe(self, text="Progress", padding=10)
-        pb_frame.pack(fill=tk.X, pady=5, padx=10)
-        
-        # Extract progress with percent display
-        extract_row = tb.Frame(pb_frame)
-        extract_row.pack(fill=tk.X, pady=5)
-        tb.Label(extract_row, text="Text Extraction:").pack(side=tk.LEFT, padx=5)
         self.extract_percent = tk.StringVar(value="0%")
-        tb.Label(extract_row, textvariable=self.extract_percent, width=5).pack(side=tk.RIGHT, padx=5)
-        tb.Progressbar(pb_frame, variable=self.extract_progress, maximum=100).pack(fill=tk.X, pady=2, padx=5)
-
-        # Audio generation progress with percent display
-        audio_row = tb.Frame(pb_frame)
-        audio_row.pack(fill=tk.X, pady=(15, 5))
-        tb.Label(audio_row, text="Audio Generation:").pack(side=tk.LEFT, padx=5)
         self.audio_percent = tk.StringVar(value="0%")
-        tb.Label(audio_row, textvariable=self.audio_percent, width=5).pack(side=tk.RIGHT, padx=5)
-        tb.Progressbar(pb_frame, variable=self.audio_progress, maximum=100).pack(fill=tk.X, pady=2, padx=5)
-
-        # Separator
-        tb.Separator(self, orient='horizontal').pack(fill=tk.X, pady=15, padx=10)
-
-        # Logs with better styling
-        log_frame = tb.Labelframe(self, text="Process Logs", padding=10)
-        log_frame.pack(fill=tk.BOTH, expand=True, pady=5, padx=10)
         
-        self.log_text = scrolledtext.ScrolledText(log_frame, height=8)
-        self.log_text.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
-
+        # Setup the UI components
+        self.setup_ui()
+        
         # Redirect stdout and stderr to the UI
         sys.stdout = LogRedirector(self.log_message)
         sys.stderr = LogRedirector(self.log_message)
@@ -514,7 +462,141 @@ class ProgressFrame(tb.Frame):
         self.cancellation_flag = False
         self.process_thread = None
         self.running = False
+        
+    def setup_ui(self):
+        """Set up the progress tab UI components"""
+        # Action buttons at the top (always visible)
+        # Remove the "light" bootstyle from the btn_frame to use default background
+        btn_frame = tb.Frame(self)
+        btn_frame.pack(fill=tk.X, pady=(10, 5), padx=10)
+        
+        # Create the unified status and progress section
+        top_section = tb.Frame(self)
+        top_section.pack(fill=tk.X, pady=5)
+        
+        unified_frame = tb.Labelframe(top_section, text="Process Status", padding=10, bootstyle="info")
+        unified_frame.pack(fill=tk.X, pady=5)
+        
+        # Status indicators in the top row
+        status_row = tb.Frame(unified_frame)
+        status_row.pack(fill=tk.X, pady=(0, 10))
+        
+        # Left side: Current status and file
+        status_left = tb.Frame(status_row)
+        status_left.pack(side=tk.LEFT, fill=tk.X, expand=True)
+        
+        status_label = tb.Label(status_left, text="Status:", width=8)
+        status_label.pack(side=tk.LEFT, padx=(0, 5))
+        tb.Label(status_left, textvariable=self.status_text, font="-weight bold").pack(side=tk.LEFT)
+        
+        # Right side: Time remaining and count
+        status_right = tb.Frame(status_row)
+        status_right.pack(side=tk.RIGHT)
+        
+        tb.Label(status_right, text="Time Left:").pack(side=tk.LEFT, padx=(10, 5))
+        tb.Label(status_right, textvariable=self.estimated_time_text).pack(side=tk.LEFT)
+        
+        # Current file info
+        file_row = tb.Frame(unified_frame)
+        file_row.pack(fill=tk.X, pady=(0, 10))
+        
+        tb.Label(file_row, text="Current:", width=8).pack(side=tk.LEFT, padx=(0, 5))
+        tb.Label(file_row, textvariable=self.current_file_text).pack(side=tk.LEFT)
+        
+        tb.Label(file_row, textvariable=self.progress_count_text).pack(side=tk.RIGHT)
+        
+        # Progress bars with enhanced styling
+        tb.Separator(unified_frame, orient='horizontal').pack(fill=tk.X, pady=5)
+        
+        # Extract progress with better visual styling
+        extract_row = tb.Frame(unified_frame)
+        extract_row.pack(fill=tk.X, pady=5)
+        
+        # Use an icon or distinctive marker
+        tb.Label(extract_row, text="📄", font="-size 12").pack(side=tk.LEFT, padx=(0, 5))
+        tb.Label(extract_row, text="Text Extraction:").pack(side=tk.LEFT)
+        
+        tb.Label(extract_row, textvariable=self.extract_percent, width=5).pack(side=tk.RIGHT)
+        
+        tb.Progressbar(unified_frame, variable=self.extract_progress, maximum=100, 
+                    bootstyle="info").pack(fill=tk.X, pady=(0, 10))
+        
+        # Audio generation progress
+        audio_row = tb.Frame(unified_frame)
+        audio_row.pack(fill=tk.X, pady=5)
+        
+        tb.Label(audio_row, text="🔊", font="-size 12").pack(side=tk.LEFT, padx=(0, 5))
+        tb.Label(audio_row, text="Audio Generation:").pack(side=tk.LEFT)
+        
+        tb.Label(audio_row, textvariable=self.audio_percent, width=5).pack(side=tk.RIGHT)
+        
+        tb.Progressbar(unified_frame, variable=self.audio_progress, maximum=100,
+                    bootstyle="success").pack(fill=tk.X)
+        
+        # Log section with clear button
+        log_frame = tb.Labelframe(self, text="Process Logs", padding=10)
+        log_frame.pack(fill=tk.BOTH, expand=True, pady=(10, 5))
+        
+        log_header = tb.Frame(log_frame)
+        log_header.pack(fill=tk.X, pady=(0, 5))
+        
+        clear_log_btn = tb.Button(log_header, text="Clear Logs", bootstyle="secondary-outline", 
+                                command=lambda: self.log_text.delete(1.0, tk.END))
+        clear_log_btn.pack(side=tk.RIGHT)
+        
+        self.log_text = scrolledtext.ScrolledText(log_frame, height=12)
+        self.log_text.pack(fill=tk.BOTH, expand=True)
+        
+        # Create the buttons in the fixed area with better grouping
+        # Use default frame without bootstyle to inherit theme background
+        control_group = tb.Frame(btn_frame)
+        control_group.pack(side=tk.LEFT, pady=5)
+        
+        self.start_button = tb.Button(
+            control_group, 
+            text="▶ Start Process", 
+            bootstyle="success", 
+            command=self._start_process_thread,
+            width=15
+        )
+        self.start_button.pack(side=tk.LEFT, padx=(0, 15))
+        
+        # Group pause/resume together
+        pause_resume_group = tb.Frame(control_group)
+        pause_resume_group.pack(side=tk.LEFT)
+        
+        self.pause_button = tb.Button(
+            pause_resume_group, 
+            text="⏸ Pause", 
+            bootstyle="warning", 
+            command=self._pause_process,
+            width=10
+        )
+        self.pause_button.pack(side=tk.LEFT, padx=(0, 5))
 
+        self.resume_button = tb.Button(
+            pause_resume_group, 
+            text="⏯ Resume", 
+            bootstyle="info", 
+            command=self._resume_process,
+            state=tk.DISABLED,
+            width=10
+        )
+        self.resume_button.pack(side=tk.LEFT)
+        
+        # Visual separator
+        tb.Separator(btn_frame, orient='vertical').pack(side=tk.LEFT, fill=tk.Y, padx=15, pady=5)
+        
+        # Cancel on its own
+        self.cancel_button = tb.Button(
+            btn_frame, 
+            text="⏹ Cancel", 
+            bootstyle="danger", 
+            command=self._cancel_process,
+            state=tk.DISABLED,
+            width=10
+        )
+        self.cancel_button.pack(side=tk.LEFT, pady=5)
     # Add/modify methods to update the new UI elements
     def update_extract_progress(self, value):
         self.extract_progress.set(value)
@@ -692,9 +774,9 @@ class ProgressFrame(tb.Frame):
                     cancellation_flag=lambda: self.cancellation_flag,
                     update_estimate_callback=self.set_estimated_time,
                     pause_event=self.pause_event,
-                    file_callback = lambda filename, i, total_folders: (
+                    file_callback = lambda filename, i, total: (
                         self.set_current_file(filename),
-                        self.set_progress_count(i, total_folders)
+                        self.set_progress_count(i, total)
                     )
                 )
 
@@ -745,12 +827,6 @@ class ProgressFrame(tb.Frame):
     def set_status(self, status):
         self.status_text.set(status)
 
-    def update_extract_progress(self, value):
-        self.extract_progress.set(value)
-
-    def update_audio_progress(self, value):
-        self.audio_progress.set(value)
-
     def set_estimated_time(self, seconds_left):
         if seconds_left <= 0:
             self.estimated_time_text.set("Processing complete!")
@@ -768,7 +844,7 @@ class ProgressFrame(tb.Frame):
         else:
             time_str = f"{s}s"
             
-        self.estimated_time_text.set(f"Estimated time remaining: {time_str}")
+        self.estimated_time_text.set(f"{time_str}")
         
         # Update percentage display if we have the data
         if hasattr(self, 'audio_progress'):
@@ -783,11 +859,19 @@ class AudiobookApp(tb.Window):
       3) Progress & Logs
     """
     CONFIG_FILE = "config.json"
+    def configure_styles(self):
+        style = tb.Style()
+        style.configure('TLabel', font=('Helvetica', 10))
+        style.configure('TButton', padding=5)
+        style.configure('TLabelframe', padding=10)
+        style.configure('TRadiobutton', padding=5)
+        style.configure('TCheckbutton', padding=5)
 
     def __init__(self, *args, **kwargs):
         self.selected_theme = self._load_theme_from_config()
         super().__init__(*args, themename=self.selected_theme, **kwargs)
-
+        tb.Style().theme_use(self.selected_theme)  # Set initial theme
+        self.configure_styles()
         self.title("PDF Narrator")
         self.geometry("1000x800")
         self.minsize(850, 700)  # Slightly larger minimum size to ensure buttons are visible
@@ -829,10 +913,9 @@ class AudiobookApp(tb.Window):
         # Create scrollable content area for each tab
         self.setup_scrollable_tab(self.source_tab, SourceFrame)
         self.setup_scrollable_tab(self.audio_tab, AudioFrame)
-        
+
         self.setup_progress_tab()
 
-        
         # Set up the scrollable content for the Voice Test tab
         self.setup_scrollable_tab(self.voice_test_tab, VoiceTestFrame)
 
@@ -929,6 +1012,7 @@ class AudiobookApp(tb.Window):
         new_theme = self.theme_var.get()
         tb.Style().theme_use(new_theme)
         self.selected_theme = new_theme
+        self.configure_styles()  # Reapply custom styles
 
     def _load_theme_from_config(self):
         if os.path.exists(self.CONFIG_FILE):
@@ -1060,36 +1144,23 @@ class AudiobookApp(tb.Window):
             self.audio_frame = content
 
     def setup_progress_tab(self):
-        # Create a container for the progress tab
-        progress_container = tb.Frame(self.progress_tab)
-        progress_container.pack(fill=tk.BOTH, expand=True)
-            
         # Progress tab should use all available space
         self.progress_tab.pack_propagate(False)
         
-        # Action buttons at the top (always visible)
-        btn_frame = tb.Frame(progress_container)
-        btn_frame.pack(fill=tk.X, pady=10)
-        # Create a wrapper function for the progress frame
-        class ProgressFrameWrapper(tb.Frame):
-            def __init__(self, master, *args, **kwargs):
-                super().__init__(master, *args, **kwargs)
-                self.app = self.master.master.master  # Reference to the main app
-                
-                # Create the progress frame without the buttons
-                self.progress_frame = ProgressFrame(self, self.app)
-                self.progress_frame.pack(fill=tk.BOTH, expand=True)
-
-        # Create a scrollable area for the progress content
+        # Create a container for the progress tab
+        progress_container = tb.Frame(self.progress_tab)
+        progress_container.pack(fill=tk.BOTH, expand=True)
+        
+        # Create a scrollable area for the logs
         canvas = tk.Canvas(progress_container)
-        canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-            
+        canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=10, pady=(0, 10))
+        
         scrollbar = tb.Scrollbar(progress_container, orient="vertical", command=canvas.yview)
-        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y, pady=(0, 10))
         
         canvas.configure(yscrollcommand=scrollbar.set)
         
-        # Create frame inside canvas for progress content
+        # Create frame inside canvas for logs content
         scrollable_frame = tb.Frame(canvas)
         scrollable_frame_id = canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
         
@@ -1108,59 +1179,9 @@ class AudiobookApp(tb.Window):
         # Enable mousewheel scrolling
         self.bind_mousewheel(canvas)
         
-        # Create and add the ProgressFrame without buttons to the scrollable frame
+        # Create the ProgressFrame with modified layout
         self.progress_frame = ProgressFrame(scrollable_frame, app=self)
-        self.progress_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
-        
-        # Move the buttons to the top fixed area
-        self.progress_buttons = tb.Frame(btn_frame)
-        self.progress_buttons.pack(pady=10)
-        
-        # Create the buttons in the fixed area
-        self.start_button = tb.Button(
-            self.progress_buttons, 
-            text="Start Process", 
-            bootstyle=SUCCESS, 
-            command=self.progress_frame._start_process_thread,
-            width=15
-        )
-        self.start_button.pack(side=tk.LEFT, padx=10)
-
-        self.pause_button = tb.Button(
-            self.progress_buttons, 
-            text="Pause", 
-            bootstyle=WARNING, 
-            command=self.progress_frame._pause_process,
-            width=10
-        )
-        self.pause_button.pack(side=tk.LEFT, padx=10)
-
-        self.resume_button = tb.Button(
-            self.progress_buttons, 
-            text="Resume", 
-            bootstyle=INFO, 
-            command=self.progress_frame._resume_process,
-            state=tk.DISABLED,
-            width=10
-        )
-        self.resume_button.pack(side=tk.LEFT, padx=10)
-        
-        self.cancel_button = tb.Button(
-            self.progress_buttons, 
-            text="Cancel", 
-            bootstyle=DANGER, 
-            command=self.progress_frame._cancel_process,
-            state=tk.DISABLED,
-            width=10
-        )
-        self.cancel_button.pack(side=tk.LEFT, padx=10)
-        
-        # Link the buttons to the progress frame
-        self.progress_frame.start_button = self.start_button
-        self.progress_frame.pause_button = self.pause_button
-        self.progress_frame.resume_button = self.resume_button
-        self.progress_frame.cancel_button = self.cancel_button
-
+        self.progress_frame.pack(fill=tk.BOTH, expand=True)
     def bind_mousewheel(self, canvas):
         # Bind the event globally on the entire window
         self.bind_all("<MouseWheel>", lambda event: self._on_mousewheel(event, canvas))  # Windows
@@ -1191,7 +1212,7 @@ class VoiceTestFrame(tb.Frame):
         os.makedirs(self.test_output_dir.get(), exist_ok=True)
         
         # Test Mode Selection remains unchanged...
-        mode_frame = tb.Labelframe(self, text="Test Mode", padding=10)
+        mode_frame = tb.Labelframe(self, text="Test Mode", padding=10, bootstyle="info")
         mode_frame.pack(fill=tk.X, pady=10, padx=10)
         
         tb.Radiobutton(
@@ -1211,9 +1232,9 @@ class VoiceTestFrame(tb.Frame):
             padding=5
         ).pack(anchor=tk.W, padx=10, pady=5)
         self.voice_container = tb.Frame(self)
-        self.voice_container.pack(fill=tk.X, pady=10, padx=10)
+        self.voice_container.pack(fill=tk.X, pady=10)
         # Voice Selection (for single voice mode)
-        self.voice_frame = tb.Labelframe(self.voice_container, text="Voice Selection", padding=10)
+        self.voice_frame = tb.Labelframe(self.voice_container, text="Voice Selection", padding=10, bootstyle="info")
         self.voice_frame.pack(fill=tk.X)
         voice_row = tb.Frame(self.voice_frame)
         voice_row.pack(fill=tk.X, pady=5)
@@ -1255,7 +1276,7 @@ class VoiceTestFrame(tb.Frame):
         
         tb.Button(
             buttons_frame, 
-            text="Run Voice Test", 
+            text="▶ Run Voice Test", 
             bootstyle=SUCCESS,
             command=self._run_test,
             width=20
@@ -1263,7 +1284,7 @@ class VoiceTestFrame(tb.Frame):
         
         tb.Button(
             buttons_frame, 
-            text="Stop Test", 
+            text="⏹ Stop Test", 
             bootstyle=DANGER,
             command=self._stop_test,
             width=15,
@@ -1358,14 +1379,6 @@ class VoiceTestFrame(tb.Frame):
     def _run_test_thread(self, test_text):
         """Run the voice test in a background thread"""
         try:
-            # Create a temporary text file for the test
-            test_dir = os.path.join(self.project_dir, "voice_test_temp")
-            os.makedirs(test_dir, exist_ok=True)
-            
-            test_file = os.path.join(test_dir, "test_text.txt")
-            with open(test_file, "w", encoding="utf-8") as f:
-                f.write(test_text)
-            
             if self.test_mode.get() == "single":
                 # For single voice testing
                 voice = os.path.splitext(os.path.basename(self.selected_voice.get()))[0]
@@ -1374,12 +1387,12 @@ class VoiceTestFrame(tb.Frame):
                 self.progress_label.config(text=f"Testing voice 1/1: {voice}")
                 output_file = os.path.join(self.test_output_dir.get(), f"test_{voice}.wav")
                 
-                from generate_audiobook_kokoro import generate_audio_for_file_kokoro
-                generate_audio_for_file_kokoro(
-                    input_path=test_file,
-                    pipeline=None,  # Pipeline is initialized inside the function if needed
+                from generate_audiobook_kokoro import test_single_voice_kokoro
+                test_single_voice_kokoro(
+                    input_text=test_text,
                     voice=voice,
                     output_path=output_file,
+                    lang_code="a",  # Adjust if needed for your model
                     speed=1,
                     split_pattern=r'\n+',
                     cancellation_flag=lambda: self.cancellation_flag,
@@ -1388,11 +1401,20 @@ class VoiceTestFrame(tb.Frame):
                 )
                 self.progress_var.set(100)
             else:
-                # For testing all available voices, use the new function
+                # For testing all available voices
+                # Create a temporary text file for the test
+                test_dir = os.path.join(self.project_dir, "voice_test_temp")
+                os.makedirs(test_dir, exist_ok=True)
+                
+                test_file = os.path.join(test_dir, "test_text.txt")
+                with open(test_file, "w", encoding="utf-8") as f:
+                    f.write(test_text)
+                    
                 voices = available_voices()
                 total_voices = len(voices)
                 self.status_label.config(text=f"Testing all {total_voices} voices")
 
+                from generate_audiobook_kokoro import generate_audio_for_all_voices_kokoro
                 generate_audio_for_all_voices_kokoro(
                     input_path=test_file,
                     lang_code="a",  # Adjust if needed for your model
@@ -1404,12 +1426,12 @@ class VoiceTestFrame(tb.Frame):
                     progress_callback=lambda progress, duration: self.progress_var.set(progress),
                     pause_event=None
                 )
+                # Clean up the temporary file
+                if os.path.exists(test_file):
+                    os.remove(test_file)
+                    
                 # When done, set progress to 100%
                 self.progress_var.set(100)
-            
-            # Clean up the temporary file
-            if os.path.exists(test_file):
-                os.remove(test_file)
             
             if not self.cancellation_flag:
                 self.status_label.config(text="Voice testing completed!")
@@ -1430,4 +1452,3 @@ class VoiceTestFrame(tb.Frame):
                         child.configure(state=DISABLED)
                     elif isinstance(child, tb.Button) and child['text'] == "Run Voice Test":
                         child.configure(state=NORMAL)
-    

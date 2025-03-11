@@ -210,5 +210,67 @@ def generate_audio_for_all_voices_kokoro(
                     
     print("Completed audio generation for all voices.")
 
-
+def test_single_voice_kokoro(
+    input_text,
+    voice,
+    output_path,
+    lang_code="a",
+    speed=1,
+    split_pattern=r'\n+',
+    cancellation_flag=lambda: False,
+    progress_callback=None,
+    pause_event=None
+):
+    """
+    Generate a test audio sample for a single voice using the provided text.
+    This function creates a temporary text file, initializes the pipeline,
+    and generates the audio file.
+    
+    Args:
+        input_text (str): The text to convert to speech
+        voice (str): Voice to use (e.g. "af_heart")
+        output_path (str): Full path for the output audio file
+        lang_code (str): Language code for the pipeline (default "a" for American English)
+        speed (float): Speed factor for speech generation (default 1.0)
+        split_pattern (str): Regex pattern for splitting the text
+        cancellation_flag (callable): Function that returns True if process should be canceled
+        progress_callback (callable): Function to call with progress updates
+        pause_event (threading.Event): Event to pause processing
+        
+    Returns:
+        str: Path to the generated audio file
+    """
+    import tempfile
+    import os
+    
+    # Create a temporary text file for the test
+    with tempfile.NamedTemporaryFile(mode='w+', suffix='.txt', delete=False, encoding='utf-8') as temp_file:
+        temp_file_path = temp_file.name
+        temp_file.write(input_text)
+    
+    try:
+        # Initialize the pipeline for the specified language
+        pipeline = KPipeline(lang_code=lang_code)
+        
+        # Make sure output directory exists
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+        
+        # Generate the audio
+        generate_audio_for_file_kokoro(
+            input_path=temp_file_path,
+            pipeline=pipeline,
+            voice=voice,
+            output_path=output_path,
+            speed=speed,
+            split_pattern=split_pattern,
+            cancellation_flag=cancellation_flag,
+            progress_callback=progress_callback,
+            pause_event=pause_event
+        )
+        
+        return output_path
+    finally:
+        # Clean up the temporary file
+        if os.path.exists(temp_file_path):
+            os.remove(temp_file_path)
 # TODO: add a function for single voice test generation, since we need pipeline defined and ui does not define it
