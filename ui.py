@@ -741,7 +741,7 @@ class ProgressFrame(tb.Frame):
                 )
 
                 self.update_extract_progress(100)
-                all_extracted_folders.append((extracted_root, os.path.join(audio_root, book_name)))
+                all_extracted_folders.append((extracted_root, audio_root))
                 self.log_message(f"Extracted: {book_name}, saved to {extracted_root}")
 
             # Audiobook generation
@@ -1452,3 +1452,5 @@ class VoiceTestFrame(tb.Frame):
                         child.configure(state=DISABLED)
                     elif isinstance(child, tb.Button) and child['text'] == "Run Voice Test":
                         child.configure(state=NORMAL)
+
+                        

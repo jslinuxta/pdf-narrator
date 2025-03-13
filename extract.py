@@ -4,6 +4,8 @@ import os
 import sys
 import zipfile
 import tempfile
+from num2words import num2words
+
 def ensure_lines_end_with_period(text):
     """
     Ensures each line ends with a period by merging lines until a period is reached.
@@ -22,15 +24,133 @@ def ensure_lines_end_with_period(text):
     if buffer:  # Append any remaining text
         new_lines.append(buffer)
     return '\n'.join(new_lines)
+def fix_name_abbreviations(text):
+    """
+    Fix abbreviations in names like "E. Zermelo" or "H.A. Simon" by removing periods
+    after single capital letters that are likely initials.
+    """
+    # Pattern for single capital letter followed by period (and optional space) then another capital letter
+    # This handles both "E. Z" and "E.Z" patterns
+    pattern = r'(?<!\w)([A-Z])\.(\s*)(?=[A-Z])'
+    
+    # Replace with the capital letter and ensure there's a space
+    return re.sub(pattern, r'\1 ', text)
+def expand_abbreviations(text):
+    """
+    Expand common abbreviations in text
+    """
+    # Dictionary of common abbreviations and their expansions
+    abbreviations = {
+        r'\bMr\.': 'Mister',
+        r'\bMrs\.': 'Misses',
+        r'\bMs\.': 'Miss',
+        r'\bDr\.': 'Doctor',
+        r'\bProf\.': 'Professor',
+        r'\bJr\.': 'Junior',
+        r'\bSr\.': 'Senior',
+        r'\bvs\.': 'versus',
+        r'\betc\.': 'etcetera',
+        r'\bi\.e\.': 'that is',
+        r'\be\.g\.': 'for example',
+        r'\bcf\.': 'compare',
+        r'\bPh\.D\.': 'Doctor of Philosophy',
+        r'\bM\.D\.': 'Medical Doctor',
+        r'\bB\.A\.': 'Bachelor of Arts',
+        r'\bM\.A\.': 'Master of Arts',
+        r'\bU\.S\.': 'United States',
+        r'\bU\.K\.': 'United Kingdom',
+        r'\ba\.m\.': 'ante meridiem',
+        r'\bp\.m\.': 'post meridiem',
+        r'\bSt\.': 'Street',
+        r'\bAve\.': 'Avenue',
+        r'\bRd\.': 'Road',
+        r'\bBlvd\.': 'Boulevard',
+        r'\bDept\.': 'Department',
+        r'\bUniv\.': 'University',
+        r'\bCorp\.': 'Corporation',
+        r'\bInc\.': 'Incorporated',
+        r'\bLtd\.': 'Limited',
+        r'\bCo\.': 'Company',
+    }
+    
+    # Replace abbreviations
+    for abbr, expansion in abbreviations.items():
+        text = re.sub(abbr, expansion, text)
+    
+    # Fix name abbreviations (like "E. Zermelo")
+    pattern = r'(?<!\w)([A-Z])\.(\s*)(?=[A-Z])'
+    text = re.sub(pattern, r'\1 ', text)
+    
+    return text
 
+def convert_numbers_to_words(text):
+    """
+    Convert numeric values to their word equivalents, handling 
+    thousand separators and various number formats. Special handling for years.
+    """
+    from num2words import num2words
+    
+    # First replace commas between digits (thousand separators)
+    text = re.sub(r'(\d),(\d)', r'\1\2', text)
+    
+    def replace_number(match):
+        num_str = match.group(0)
+        try:
+            # Check if it's a decimal number
+            if '.' in num_str:
+                num = float(num_str)
+                return num2words(num)
+            else:
+                num = int(num_str)
+                
+                # Special handling for years (between 1500 and 2100)
+                if 1500 <= num <= 2100:
+                    # Split year into first two digits and last two digits
+                    first_part = num // 100
+                    second_part = num % 100
+                    
+                    first_word = num2words(first_part)
+                    
+                    # Handle special cases for second part
+                    if second_part == 0:
+                        if num == 2000:
+                            return "two thousand"
+                        else:
+                            return first_word + " hundred"
+                    elif second_part < 10:
+                        second_word = "oh-" + num2words(second_part)
+                    else:
+                        second_word = num2words(second_part)
+                        
+                    return first_word + " " + second_word
+                else:
+                    # Regular number conversion
+                    return num2words(num)
+                    
+        except (ValueError, TypeError):
+            # If conversion fails, return the original string
+            return match.group(0)
+    
+    # Now convert all numbers to words
+    number_pattern = r'\b\d+(\.\d+)?\b'
+    text = re.sub(number_pattern, replace_number, text)
+    
+    return text
 def clean_text(text):
     text = re.sub(r'\[\d+\]', '', text)
     # Merge hyphenated line breaks
     text = re.sub(r'-\n\s*', '', text)
     # Normalize spaces around punctuation
     text = re.sub(r'\s*([.,;!?])\s*', r'\1 ', text)
+    
+    # Expand abbreviations (do this before number conversion)
+    text = expand_abbreviations(text)
+    
+    # Convert numbers to words
+    text = convert_numbers_to_words(text)
+    
     # Handle quoted content by placing it on its own line
-    text = re.sub(r'“([^”]*)”', r'\n“\1”\n', text)  # Curly quotes
+    text = re.sub(r'"([^"]*)"', r'\n"\1"\n', text)  # Curly quotes
     text = re.sub(r'"([^"]*)"', r'\n"\1"\n', text)  # Straight quotes
     # Split text into lines for processing
     lines = text.splitlines()
@@ -45,8 +165,8 @@ def clean_text(text):
         else:
             buffer = line
         # Split at sentence-ending punctuation, respecting quotes
-        if re.search(r'[.!?]$', buffer) and not re.search(r'[“"”]$', buffer):
-            split_buffer = re.split(r'(?<=[.!?])\s+(?![”"])', buffer)
+        if re.search(r'[.!?]$', buffer) and not re.search(r'["""]$', buffer):
+            split_buffer = re.split(r'(?<=[.!?])\s+(?![""])', buffer)
             processed_lines.extend(split_buffer)
             buffer = ""
     if buffer:
@@ -59,9 +179,7 @@ def clean_text(text):
     processed_text = re.sub(r'(?<=[.!?])\s*(?!\n)', '\n', processed_text)
     # Remove excessive blank lines
     processed_text = re.sub(r'\n{3,}', '\n\n', processed_text)
-    # Additional replacements
-    processed_text = re.sub(r" vs\.", " versus ", processed_text)
-    processed_text = re.sub(r" etc\.", " etcetera ", processed_text)
+    # Additional replacements (some now handled by expand_abbreviations)
     # Remove trademark symbols
     processed_text = re.sub(r'™', '', processed_text)
     # Ensure every line ends with a period
