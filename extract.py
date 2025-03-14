@@ -136,10 +136,40 @@ def convert_numbers_to_words(text):
     text = re.sub(number_pattern, replace_number, text)
     
     return text
+def handle_section_numbers(text):
+    """
+    Identify and specially format section numbers like 1.2. or 1.2.1. at the beginning of lines
+    """
+    # Pattern for lines starting with section numbers (1., 1.2., 1.2.3., etc.)
+    section_pattern = r'(^|\n)(\d+(\.\d+)*)\.\s+'
+    
+    def section_replacement(match):
+        section_num = match.group(2)  # The actual number pattern without the trailing dot
+        parts = section_num.split('.')
+        
+        # Format based on depth
+        if len(parts) == 1:
+            prefix = "Section "
+        elif len(parts) == 2:
+            prefix = "Subsection "
+        else:
+            prefix = "Sub-subsection "
+            
+        # Create the formatted section reference
+        formatted = prefix + " ".join(parts)
+        
+        # Preserve the newline if it exists, and add a space after the formatted section
+        return (match.group(1) or '') + formatted + "."
+    
+    # Replace the section numbers
+    return re.sub(section_pattern, section_replacement, text)
+
 def clean_text(text):
     text = re.sub(r'\[\d+\]', '', text)
     # Merge hyphenated line breaks
     text = re.sub(r'-\n\s*', '', text)
+    # Handle section numbers first
+    text = handle_section_numbers(text)
     # Normalize spaces around punctuation
     text = re.sub(r'\s*([.,;!?])\s*', r'\1 ', text)
     

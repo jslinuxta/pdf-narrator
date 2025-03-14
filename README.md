@@ -87,7 +87,69 @@ PDF Narrator (Kokoro Edition) transforms your **PDF and EPUB documents** into au
    - Windows: Download from the FFmpeg official site
 
 ---
+## Windows Additional Installation Notes
 
+For Windows users, some libraries may require extra steps:
+
+### 1. **Prerequisites**
+
+- **Python 3.12.7**  
+  Download and install [Python 3.12.7](https://www.python.org/downloads/). Ensure `python` and `pip` are added to your system's PATH.
+
+- **CUDA 12.4** (for GPU acceleration)  
+  Install the [CUDA 12.4 Toolkit](https://developer.nvidia.com/cuda-downloads) if you plan to use GPU acceleration.
+
+### 2. **Installing eSpeak NG**
+
+eSpeak NG is required for phoneme-based operations.
+
+1. **Download the Installer**  
+   [eSpeak NG X64 Installer](https://github.com/espeak-ng/espeak-ng/releases/download/1.51/espeak-ng-X64.msi)
+
+2. **Run the Installer**  
+   Follow the on-screen instructions.
+
+3. **Set Environment Variables**  
+   Add the following environment variables:
+
+   - `PHONEMIZER_ESPEAK_LIBRARY` → `C:\Program Files\eSpeak NG\libespeak-ng.dll`
+   - `PHONEMIZER_ESPEAK_PATH` → `C:\Program Files (x86)\eSpeak\command_line\espeak.exe`
+
+   (Right-click "This PC" → Properties → Advanced system settings → Environment Variables)
+
+4. **Verify Installation**
+
+   Open Command Prompt and run:
+
+   ```cmd
+   espeak-ng --version
+   ```
+
+### 3. **Using Precompiled Wheels for DeepSpeed and lxml**
+
+1. **Download Wheels**
+
+   - **DeepSpeed** (for Python 3.12.7, CUDA 12.4): [DeepSpeed Wheel](https://huggingface.co/NM156/deepspeed_wheel/tree/main)
+   - **lxml** (for Python 3.12): [lxml Release](https://github.com/lxml/lxml/releases/tag/lxml-5.3.0)
+
+2. **Install the Wheels**
+
+   Activate your virtual environment and run:
+
+   ```cmd
+   pip install path\to\deepspeed-0.11.2+cuda124-cp312-cp312-win_amd64.whl
+   pip install path\to\lxml-5.3.0-cp312-cp312-win_amd64.whl
+   ```
+
+3. **Verify Installation**
+
+   ```cmd
+   deepspeed --version
+   pip show lxml
+   espeak-ng --version
+   ```
+
+---
 ## Quick Start
 
 1. **Launch the App**
