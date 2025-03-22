@@ -28,7 +28,7 @@ PDF Narrator (Kokoro Edition) transforms your **PDF and EPUB documents** into au
 
 - **Kokoro TTS Integration**
   - Generate natural-sounding audiobooks with the updated [Kokoro v1.0 model](https://huggingface.co/hexgrad/Kokoro-82M).
-  - Easily select or swap out different `.pt` voicepacks.
+  - Easily select different voicepacks.
 
 - **User-Friendly GUI**
   - Modern interface built with **ttkbootstrap** (theme selector, scrolled logs, progress bars).
@@ -157,7 +157,7 @@ eSpeak NG is required for phoneme-based operations.
    - **EPUBs:** Extracts chapters based on internal structure.
 
 4. **Configure Kokoro TTS Settings**
-   - Select your Kokoro model and a `.pt` voicepack.
+   - Select a voice.
    - Adjust chunk size and output format (`.wav` or `.mp3`).
 
 5. **Generate Audiobook**
