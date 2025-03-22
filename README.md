@@ -76,16 +76,6 @@ PDF Narrator (Kokoro Edition) transforms your **PDF and EPUB documents** into au
    pip install -r requirements.txt
    ```
 
-4. **Install Kokoro v1.0**
-   ```bash
-   pip install kokoro>=1.0.0
-   ```
-
-5. **Install FFmpeg (if required)**
-   - Ubuntu/Debian: `sudo apt-get install ffmpeg`
-   - macOS: `brew install ffmpeg`
-   - Windows: Download from the FFmpeg official site
-
 ---
 ## Windows Additional Installation Notes
 
