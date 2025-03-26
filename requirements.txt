@@ -2,7 +2,9 @@ addict==2.4.0
 annotated-types==0.7.0
 attrs==25.1.0
 babel==2.17.0
+beautifulsoup4==4.13.3
 blis==1.2.0
+bs4==0.0.2
 catalogue==2.0.10
 certifi==2025.1.31
 cffi==1.17.1
@@ -83,6 +85,7 @@ shellingham==1.5.4
 six==1.17.0
 smart-open==7.1.0
 soundfile==0.13.1
+soupsieve==2.6
 spacy==3.8.4
 spacy-curated-transformers==0.3.0
 spacy-legacy==3.0.12
