@@ -430,7 +430,9 @@ class AudioFrame(tb.Frame):
         format_map = {".wav": ".wav (High Quality)", ".mp3": ".mp3 (Smaller Size)"}
         self.chunk_size_display.set(chunk_map.get(self.chunk_size.get(), "510 (Small)"))
         self.audio_format_display.set(format_map.get(self.audio_format.get(), ".wav (High Quality)"))
-
+    def get_device(self):
+        """Returns the currently selected device string ('cuda' or 'cpu')."""
+        return self.device.get() # Retrieve the value from the tk.StringVar
 
 class ControlFrame(tb.Frame):
     """Frame for process control buttons and primary status display."""

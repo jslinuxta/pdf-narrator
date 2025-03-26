@@ -227,7 +227,7 @@ def generate_audiobooks_kokoro(
         print(f"  Initializing Kokoro pipeline for lang='{lang_code}' on device='{device}'...")
         init_start_time = time.time()
         # *** CRUCIAL: Assuming KPipeline accepts 'device' argument ***
-        pipeline = KPipeline(lang_code=lang_code, device=device)
+        pipeline = KPipeline(lang_code=lang_code, device=device, repo_id='hexgrad/Kokoro-82M')
         print(f"  Pipeline initialized in {time.time() - init_start_time:.2f}s.")
     except AssertionError as e:
          # Catch assertion errors specifically, often related to invalid lang_code
