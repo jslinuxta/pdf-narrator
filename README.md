@@ -15,7 +15,19 @@ PDF Narrator (Kokoro Edition) transforms your **PDF and EPUB documents** into au
 
 2. **Audio Sample**  
    Listen to a short sample of the generated audiobook:  
-   [Audio Sample](https://github.com/user-attachments/assets/02953345-aceb-41f3-babf-1d1606c76641)
+   - af_sky
+   
+https://github.com/user-attachments/assets/f1e0a88b-9d44-40d6-82c4-dcf070db6856
+
+   - am_liam
+   
+https://github.com/user-attachments/assets/de611592-9404-416a-8118-1acca1651edf
+
+   - af_heart
+   
+https://github.com/user-attachments/assets/b9d87ed4-3458-4116-accf-0816ec1448b2
+
+
 
 ---
 
