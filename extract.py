@@ -401,6 +401,73 @@ def structure_pdf_by_toc(deduplicated_toc, all_pages_text):
     print(f"  Finished structuring. Found {len(final_chapters)} non-empty chapters.")
     return final_chapters
 
+# --- Heuristic Chapter Splitting (Fallback for PDF without TOC) ---
+def split_text_into_heuristic_chapters(full_raw_text):
+    """
+    Attempts to split raw text into chapters based on heuristics like
+    multiple newlines or potential chapter-like headings.
+
+    Args:
+        full_raw_text (str): The combined raw text from all PDF pages.
+
+    Returns:
+        list[dict]: List of chapters [{'title': 'Chapter N', 'text': cleaned_chunk}, ...],
+                    or an empty list if splitting fails or text is empty.
+    """
+    if not full_raw_text or not full_raw_text.strip():
+        return []
+
+    print("    Attempting heuristic chapter splitting...")
+
+    # --- Strategy 1: Split by multiple newlines (common section break) ---
+    # Use 3 or more newlines as a strong indicator of a major break.
+    # This needs to happen *before* aggressive whitespace cleaning.
+    potential_chunks = re.split(r'\n\s*\n+', full_raw_text) # 3+ newlines with optional whitespace
+
+    # --- Refine Chunks (Basic filtering) ---
+    chapters = []
+    chapter_count = 0
+    min_chunk_length = 100 # Avoid tiny fragments being called chapters
+
+    for i, chunk in enumerate(potential_chunks):
+        trimmed_chunk = chunk.strip()
+        if len(trimmed_chunk) > min_chunk_length:
+            chapter_count += 1
+            # Apply the full cleaning pipeline *to each chunk*
+            cleaned_chunk_text = clean_pipeline(trimmed_chunk)
+            if cleaned_chunk_text: # Ensure cleaning didn't make it empty
+                chapters.append({
+                    'title': f'Chapter_{chapter_count}', # Generic title
+                    'level': None, # No level info available
+                    'text': cleaned_chunk_text
+                })
+        # else: # Optional: Log discarded small chunks
+            # print(f"      Discarding small chunk {i+1} (length {len(trimmed_chunk)})")
+
+
+    # --- Alternative/Future Strategy (More Complex): Look for Header Patterns ---
+    # This would involve regex for "CHAPTER X", "Part Y", lines in ALL CAPS, etc.
+    # Requires more careful implementation to avoid false positives.
+    # Example (conceptual, not fully implemented):
+    # chapter_start_pattern = r'^\s*(?:CHAPTER|PART)\s+[IVXLCDM\d]+.*$|^\s*[A-Z\s]{5,}\s*$' # Regex for CHAPTER X or ALL CAPS lines
+    # if not chapters: # Only if newline split failed
+    #    lines = full_raw_text.splitlines()
+    #    current_chapter_lines = []
+    #    for line in lines:
+    #        if re.match(chapter_start_pattern, line, re.IGNORECASE) and current_chapter_lines:
+    #             # Found potential new chapter, process the previous one
+    #             # ... (logic to save previous chapter, clean it, etc.) ...
+    #             current_chapter_lines = [line]
+    #        else:
+    #             current_chapter_lines.append(line)
+    #    # Process the last chapter
+
+    if chapters:
+        print(f"    Heuristically split into {len(chapters)} potential chapters.")
+    else:
+        print("    Heuristic splitting did not yield significant chapters.")
+
+    return chapters
 
 # --- EPUB Extraction ---
 # ... (Keep parse_epub_content UNCHANGED) ...
@@ -643,7 +710,32 @@ def extract_book(file_path, use_toc=True, extract_mode="chapters", output_dir="e
     """
     Extracts text from PDF or EPUB files, cleans it, and saves chapters or whole text
     directly into the specified output_dir.
-    ... (rest of docstring unchanged) ...
+
+    Args:
+        file_path (str): Path to the input PDF or EPUB file.
+        use_toc (bool): If True (and PDF), attempt to use the Table of Contents
+                        to structure chapters. If False or TOC fails, behavior
+                        depends on extract_mode.
+        extract_mode (str): 'chapters' or 'whole'.
+                            - 'chapters': Tries to save text into separate chapter files.
+                              Uses TOC if available (PDF), spine order (EPUB), or
+                              heuristic splitting (PDF fallback).
+                            - 'whole': Saves the entire cleaned text into a single file.
+        output_dir (str): The directory where the output file(s) will be saved.
+                          The function will create this directory if it doesn't exist.
+                          A subdirectory named after the book might be implicitly created
+                          by saving functions depending on their implementation, but the
+                          base is `output_dir`.
+        progress_callback (callable, optional): A function to call with progress percentage
+                                                (0-100) or None on error. Defaults to None.
+
+    Returns:
+        str: The absolute path to the output directory used.
+
+    Raises:
+        FileNotFoundError: If the input file does not exist.
+        ValueError: If the file format is unsupported or the EPUB is invalid.
+        Exception: Other errors during processing (e.g., PDF parsing issues).
     """
     start_time = time.time()
     if progress_callback: progress_callback(0)
@@ -656,9 +748,12 @@ def extract_book(file_path, use_toc=True, extract_mode="chapters", output_dir="e
     safe_book_name = re.sub(r'[^\w\s-]', '', book_name_base).strip().replace(' ', '_')
     if not safe_book_name: safe_book_name = "unnamed_book"
 
+    # Ensure the final output directory exists
     os.makedirs(output_dir, exist_ok=True)
+    absolute_output_dir = os.path.abspath(output_dir) # Use absolute path for clarity
+
     print(f"--- Starting Extraction for: {os.path.basename(file_path)} ---")
-    print(f"    Output directory       : {output_dir}")
+    print(f"    Output directory       : {absolute_output_dir}")
     print(f"    Use TOC                : {use_toc}")
     print(f"    Extraction Mode        : {extract_mode}")
 
@@ -670,63 +765,78 @@ def extract_book(file_path, use_toc=True, extract_mode="chapters", output_dir="e
             print(f"  Opened PDF. Pages: {len(doc)}")
 
             if progress_callback: progress_callback(10)
-            # Always extract page by page first for potential TOC use
+            # Always extract page by page first
             all_pages_text = extract_pdf_text_by_page(doc)
             print(f"  Extracted raw text from {len(all_pages_text)} pages.")
-
             if progress_callback: progress_callback(40)
 
-            # Try TOC processing if requested and chapter mode
-            toc = get_toc(doc)
-            dedup_toc = deduplicate_toc(toc) if toc else []
+            # --- Chapter Logic ---
+            pdf_chapters = []
+            toc_used = False
 
-            if use_toc and dedup_toc and extract_mode == "chapters":
-                print("  Attempting to structure PDF by TOC...")
-                if progress_callback: progress_callback(50)
-                pdf_chapters = structure_pdf_by_toc(dedup_toc, all_pages_text)
-                if progress_callback: progress_callback(85)
+            if extract_mode == "chapters":
+                toc = get_toc(doc)
+                dedup_toc = deduplicate_toc(toc) if toc else []
 
-                if pdf_chapters:
-                    save_chapters_generic(pdf_chapters, safe_book_name, output_dir)
+                if use_toc and dedup_toc:
+                    print("  Attempting to structure PDF by TOC...")
+                    if progress_callback: progress_callback(50)
+                    pdf_chapters = structure_pdf_by_toc(dedup_toc, all_pages_text)
+                    if progress_callback: progress_callback(85)
+                    if pdf_chapters:
+                        toc_used = True
+                    else:
+                        print("  Structuring by TOC resulted in no chapters. Will attempt fallback.")
                 else:
-                    print("  Structuring by TOC resulted in no chapters. Saving as whole book text.")
-                    full_text = "\n".join(all_pages_text)
-                    save_whole_book_text(full_text, safe_book_name, output_dir)
-            else:
-                # Fallback to whole book
-                if extract_mode == "chapters":
-                     if not use_toc: print("  TOC usage disabled.")
-                     elif not dedup_toc: print("  No usable TOC found.")
-                     print("  Saving PDF as whole book text.")
-                else: # extract_mode == "whole"
-                     print("  Saving PDF as whole book text.")
+                    if not use_toc: print("  TOC usage disabled.")
+                    elif not dedup_toc: print("  No usable TOC found.")
+                    print("  Will attempt heuristic chapter splitting.")
 
+                # --- Heuristic Fallback ---
+                if not toc_used:
+                    if progress_callback: progress_callback(50) # Show progress for heuristic attempt
+                    full_raw_text = "\n".join(all_pages_text) # Combine raw pages
+                    pdf_chapters = split_text_into_heuristic_chapters(full_raw_text)
+                    if progress_callback: progress_callback(85)
+
+                # --- Save Chapters (if found by either method) ---
+                if pdf_chapters:
+                    save_chapters_generic(pdf_chapters, safe_book_name, absolute_output_dir)
+                else:
+                    # If STILL no chapters after TOC and heuristic, save as whole
+                    print("  No chapters found via TOC or heuristics. Saving as whole book text.")
+                    full_raw_text = "\n".join(all_pages_text) # Combine raw pages again (splitter might have failed)
+                    save_whole_book_text(full_raw_text, safe_book_name, absolute_output_dir) # save_whole cleans the text
+
+            # --- Whole Book Mode ---
+            else: # extract_mode == "whole"
+                print("  Saving PDF as whole book text.")
                 if progress_callback: progress_callback(60)
                 full_text = "\n".join(all_pages_text) # Join all pages extracted earlier
-                save_whole_book_text(full_text, safe_book_name, output_dir)
+                save_whole_book_text(full_text, safe_book_name, absolute_output_dir) # save_whole cleans the text
 
             doc.close()
             if progress_callback: progress_callback(95)
 
         elif file_ext == '.epub':
+            # --- EPUB Processing (largely unchanged) ---
             print("  Processing EPUB file...")
-            # Progress handled inside parse_epub_content
             epub_chapters = parse_epub_content(file_path, progress_callback)
 
             if not epub_chapters:
                  print("  Warning: No content extracted from EPUB.")
-                 # Decide action: maybe save an empty file or just warn? For now, just warn.
 
             if extract_mode == "chapters":
                  if epub_chapters:
-                     save_chapters_generic(epub_chapters, safe_book_name, output_dir)
+                     save_chapters_generic(epub_chapters, safe_book_name, absolute_output_dir)
                  else:
                      print("  No EPUB chapters extracted, nothing to save in chapter mode.")
             else: # extract_mode == "whole"
                  if epub_chapters:
                      print("  Combining EPUB chapters into whole book text...")
-                     full_text = "\n\n".join([chap['text'] for chap in epub_chapters])
-                     save_whole_book_text(full_text, safe_book_name, output_dir)
+                     # Join chapters with double newline for paragraph separation between files
+                     full_text = "\n\n".join([chap['text'] for chap in epub_chapters if chap.get('text')])
+                     save_whole_book_text(full_text, safe_book_name, absolute_output_dir) # save_whole cleans the text
                  else:
                       print("  No EPUB content extracted, nothing to save in whole book mode.")
 
@@ -736,13 +846,13 @@ def extract_book(file_path, use_toc=True, extract_mode="chapters", output_dir="e
         elapsed_time = time.time() - start_time
         print(f"--- Extraction completed in {elapsed_time:.2f} seconds ---")
         if progress_callback: progress_callback(100)
-        return output_dir
+        return absolute_output_dir # Return the absolute path
 
     except Exception as e:
         print(f"!!! Error during extraction for '{file_path}': {e}")
         traceback.print_exc() # Print full traceback for easier debugging
         if progress_callback: progress_callback(None) # Indicate error
-        raise # Re-raise the exception to be caught by the UI
+        raise # Re-raise the exception
 
 # --- Example Usage (commented out) ---
 '''
